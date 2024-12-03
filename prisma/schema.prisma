@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// event SocketBridge(
+// uint256 amount,
+// address token,
+// uint256 toChainId,
+// bytes32 bridgeName,
+// address sender,
+// address receiver,
+// bytes32 metadata
+// );
+model BridgeEvent {
+  id         Int      @id @default(autoincrement())
+  amount     BigInt
+  token      String
+  toChainId  Int
+  bridgeName String
+  sender     String
+  receiver   String
+  metadata   String
+  timestamp  DateTime @default(now())
+
+  @@map("bridge_events")
+}
