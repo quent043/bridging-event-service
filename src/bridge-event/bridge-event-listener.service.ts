@@ -1,8 +1,8 @@
 import {Inject, Injectable, OnModuleInit} from '@nestjs/common';
-import {decodeEventLog, PublicClient} from 'viem';
-import {SocketGatewayABI} from "../../contracts/ABI/SocketGateway";
-import {RedisService} from "../redis/redis.service";
-import {MetricsService} from "../metrics/metrics.service";
+import {Log, PublicClient} from 'viem';
+import {SocketGatewayABI} from '../../contracts/ABI/SocketGateway';
+import {RedisService} from '../redis/redis.service';
+import {MetricsService} from '../metrics/metrics.service';
 import {SocketBridgeEventLog} from "../../types";
 
 @Injectable()
@@ -28,46 +28,19 @@ export class BridgeEventListenerService implements OnModuleInit {
             address: this.contractAddress as `0x${string}`,
             abi: this.abi,
             eventName,
-            onLogs: async (logs) => {
-                for (const log of logs) {
-                    console.log('Event received:', log);
+            onLogs: async (logs: Log[]) => {
+                for (const log of logs as unknown as SocketBridgeEventLog[]) {
+                    console.log('Raw Event Log Received:', log);
                     try {
-                        // Decode the raw log
-                        const decodedLog = decodeEventLog({
-                            abi: this.abi,
-                            data: log.data,
-                            topics: log.topics,
-                        });
+                            // Process the event with metricsService
+                            await this.metricsService.processBridgeEvent(log);
 
-                        if (decodedLog.eventName === 'SocketBridge' && decodedLog.args) {
-                            // Narrow down the type of decodedLog.args
-                            const args = decodedLog.args as unknown as {
-                                amount: bigint;
-                                token: string;
-                                toChainId: bigint;
-                                bridgeName: string;
-                                sender: string;
-                                receiver: string;
-                                metadata: string;
-                            };
-
-                            // Augment the log with decoded information
-                            const typedLog = {
-                                ...log,
-                                eventName: decodedLog.eventName,
-                                args,
-                            };
-
-                            console.log('Decoded Event:', typedLog);
-                        }
-
-                    // TODO: Check what data to push to the queue
-                    await this.metricsService.processBridgeEvent(log);
-                    //TODO chépa si ça sert ça
-                    await this.redisService.publish('bridge_events', JSON.stringify(log));
-                } catch (error) {
+                            // Publish the event to Redis for further processing
+                            // await this.redisService.publish('bridge_events', JSON.stringify(log));
+                    } catch (error) {
                         console.error('Failed to decode event log:', error);
                     }
+                }
             },
         });
     }
