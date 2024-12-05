@@ -13,67 +13,79 @@ export class MetricsService {
 
   private redisClient = this.redisService.getClient();
 
-  //TODO: type event & Batch promisse.all
-  // Process an incoming bridging event
+  //TODO: Implement pipelines for redis
   async processBridgeEvent(eventData: SocketBridgeEventLog) {
     console.log('Processing event...');
 
-    await this.prismaService.saveRawEvent(eventData);
+    const saveRawEventPromise = this.prismaService.saveRawEvent(eventData);
 
-    // Increment the total volume for the token
-    const updatedTokenVolume = await this.incrementBigNumberInHash(
+    const updatedTokenVolumePromise = this.incrementBigNumberInHash(
       'bridge_events:total_volume',
       eventData.args.token,
       eventData.args.amount.toString(),
     );
 
-    // Increment the total volume by chain
-    const updatedChainVolume = await this.incrementBigNumberInHash(
+    const updatedChainVolumePromise = this.incrementBigNumberInHash(
       'bridge_events:volume_by_chain',
       eventData.args.toChainId.toString(),
       eventData.args.amount.toString(),
     );
 
-    // Add sender to active users
-    await this.redisClient.sAdd('bridge_events:active_users', eventData.args.sender);
-
-    await this.redisService.publish(
-      'bridge_events:processed_updates',
-      JSON.stringify({
-        type: 'token_update',
-        token: eventData.args.token,
-        totalVolume: updatedTokenVolume,
-      }),
+    const addSenderPromise = this.redisClient.sAdd(
+      'bridge_events:active_users',
+      eventData.args.sender,
     );
 
-    await this.redisService.publish(
-      'bridge_events:processed_updates',
-      JSON.stringify({
-        type: 'chain_update',
-        chainId: eventData.args.toChainId.toString(),
-        totalVolume: updatedChainVolume,
-      }),
-    );
+    const [updatedTokenVolume, updatedChainVolume] = await Promise.all([
+      updatedTokenVolumePromise,
+      updatedChainVolumePromise,
+    ]);
 
-    await this.prismaService.saveProcessedData(
-      'token',
-      eventData.args.token,
-      null,
-      updatedTokenVolume,
-      eventData.args.amount,
-    );
+    const publishPromises = Promise.all([
+      this.redisService.publish(
+        'bridge_events:processed_updates',
+        JSON.stringify({
+          type: 'token_update',
+          token: eventData.args.token,
+          totalVolume: updatedTokenVolume,
+        }),
+      ),
+      this.redisService.publish(
+        'bridge_events:processed_updates',
+        JSON.stringify({
+          type: 'chain_update',
+          chainId: eventData.args.toChainId.toString(),
+          totalVolume: updatedChainVolume,
+        }),
+      ),
+    ]);
 
-    await this.prismaService.saveProcessedData(
-      'chain',
-      eventData.args.toChainId.toString(),
-      null,
-      updatedChainVolume,
-      eventData.args.amount,
-    );
+    const saveProcessedDataPromises = Promise.all([
+      this.prismaService.saveProcessedData(
+        'token',
+        eventData.args.token,
+        updatedTokenVolume,
+        eventData.args.amount,
+      ),
+      this.prismaService.saveProcessedData(
+        'chain',
+        eventData.args.toChainId.toString(),
+        updatedChainVolume,
+        eventData.args.amount,
+      ),
+    ]);
+
+    await Promise.all([
+      saveRawEventPromise,
+      addSenderPromise,
+      publishPromises,
+      saveProcessedDataPromises,
+    ]);
 
     console.log('Published updates for token and chain volumes');
   }
 
+  //TODO: Belongs in redis utils
   // Private function to handle BigNumber operations with Redis
   private async incrementBigNumberInHash(
     hashKey: string,
