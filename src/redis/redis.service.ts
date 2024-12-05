@@ -3,7 +3,7 @@ import { createClient } from 'redis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-    private client;
+    private readonly client;
 
     constructor() {
         this.client = createClient({
@@ -27,10 +27,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     getClient() {
         return this.client;
-    }
-
-    async publish(channel: string, message: string): Promise<void> {
-        await this.client.publish(channel, message);
     }
 
     async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
