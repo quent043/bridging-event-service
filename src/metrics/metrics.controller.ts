@@ -1,12 +1,22 @@
 import { Controller, Get } from '@nestjs/common';
-import {MetricsService} from "./metrics.service";
+import { MetricsService } from './metrics.service';
 
 @Controller('metrics')
 export class MetricsController {
-    constructor(private readonly metricsService: MetricsService) {}
+  constructor(private readonly metricsService: MetricsService) {}
 
-    @Get('total_volume')
-    async getTotalVolume() {
-        return await this.metricsService.getTotalVolumePerToken();
-    }
+  @Get('total_volume')
+  async getTotalVolume() {
+    return await this.metricsService.getTotalVolumePerToken();
+  }
+
+  @Get('total_volume_by_chain')
+  async getTotalVolumeByChain() {
+    return await this.metricsService.getTotalVolumeByChain();
+  }
+
+  @Get('active_users')
+  async getTotalActiveUsers() {
+    return await this.metricsService.getTotalActiveUsers();
+  }
 }
