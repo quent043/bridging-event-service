@@ -13,25 +13,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// event SocketBridge(
-// uint256 amount,
-// address token,
-// uint256 toChainId,
-// bytes32 bridgeName,
-// address sender,
-// address receiver,
-// bytes32 metadata
-// );
 model BridgeEvent {
-  id         Int      @id @default(autoincrement())
-  amount     BigInt
-  token      String
-  toChainId  Int
-  bridgeName String
-  sender     String
-  receiver   String
-  metadata   String
-  timestamp  DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  amount          String
+  token           String
+  toChainId       Int
+  bridgeName      String
+  sender          String
+  receiver        String
+  metadata        String
+  blockNumber     String
+  transactionhash String?
+  timestamp       DateTime @default(now())
 
   @@map("bridge_events")
+}
+
+model ProcessedBridgeData {
+  id           Int            @id @default(autoincrement())
+  type         BridgeDataType
+  referenceId  String // token address or chain id
+  volumeChange String
+  totalVolume  String
+  timestamp    DateTime       @default(now())
+
+  @@index([type, referenceId])
+  @@map("processed_bridge_data")
+}
+
+enum BridgeDataType {
+  token
+  chain
 }
