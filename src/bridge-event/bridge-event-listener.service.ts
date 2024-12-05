@@ -1,47 +1,48 @@
-import {Inject, Injectable, OnModuleInit} from '@nestjs/common';
-import {Log, PublicClient} from 'viem';
-import {SocketGatewayABI} from '../../contracts/ABI/SocketGateway';
-import {RedisService} from '../redis/redis.service';
-import {MetricsService} from '../metrics/metrics.service';
-import {SocketBridgeEventLog} from "../../types";
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Log, PublicClient } from 'viem';
+import { SocketGatewayABI } from '../../contracts/ABI/SocketGateway';
+import { MetricsService } from '../metrics/metrics.service';
+import { SocketBridgeEventLog } from '../../types';
 
 @Injectable()
 export class BridgeEventListenerService implements OnModuleInit {
-    private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
-    private readonly abi = SocketGatewayABI;
+  private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
+  private readonly abi = SocketGatewayABI;
 
-    constructor(
-        @Inject('PUBLIC_CLIENT') private publicClient: PublicClient,
-        private readonly redisService: RedisService,
-        private readonly metricsService: MetricsService,
-    ) {}
+  constructor(
+    @Inject('PUBLIC_CLIENT') private publicClient: PublicClient,
+    private readonly metricsService: MetricsService,
+  ) {}
 
-    async onModuleInit() {
-        console.log('Initializing event listener...');
-        this.listenToEvents();
-    }
+  async onModuleInit() {
+    console.log('Initializing event listener...');
+    this.listenToEvents();
+  }
 
-    private async listenToEvents() {
-        const eventName = 'SocketBridge';
+  private async listenToEvents() {
+    const eventName = 'SocketBridge';
 
-        this.publicClient.watchContractEvent({
-            address: this.contractAddress as `0x${string}`,
-            abi: this.abi,
-            eventName,
-            onLogs: async (logs: Log[]) => {
-                for (const log of logs as unknown as SocketBridgeEventLog[]) {
-                    console.log('Raw Event Log Received:', log);
-                    try {
-                            // Process the event with metricsService
-                            await this.metricsService.processBridgeEvent(log);
-
-                            // Publish the event to Redis for further processing
-                            // await this.redisService.publish('bridge_events', JSON.stringify(log));
-                    } catch (error) {
-                        console.error('Failed to decode event log:', error);
-                    }
-                }
-            },
-        });
-    }
+    this.publicClient.watchContractEvent({
+      address: this.contractAddress as `0x${string}`,
+      //TODO: need other events in ABI  ?
+      abi: this.abi,
+      eventName,
+      onLogs: async (logs: Log[]) => {
+        for (const log of logs as unknown as SocketBridgeEventLog[]) {
+          console.log(
+            'Raw Event Log Received:',
+            log.eventName.toString(),
+            log.blockNumber?.toString(),
+            log.args.amount.toString(),
+            log.args.toChainId.toString(),
+          );
+          try {
+            await this.metricsService.processBridgeEvent(log);
+          } catch (error) {
+            console.error('Failed to decode event log:', error);
+          }
+        }
+      },
+    });
+  }
 }
