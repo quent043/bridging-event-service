@@ -9,10 +9,14 @@ import { Server, Socket } from 'socket.io';
 import { RedisService } from '../redis/redis.service';
 import { Logger } from '@nestjs/common';
 
-@WebSocketGateway({ cors: true })
-export class MetricsGateway
-    implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+@WebSocketGateway({
+  cors: {
+    origin: 'http://localhost:5000',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+})
+export class MetricsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -23,13 +27,10 @@ export class MetricsGateway
   async afterInit() {
     this.logger.log('WebSocket Gateway Initialized');
 
-    await this.redisService.subscribe(
-        'bridge_events:processed_updates',
-        (message: any) => {
-          const processedData = JSON.parse(message);
-          this.broadcastUpdate(processedData);
-        },
-    );
+    await this.redisService.subscribe('bridge_events:processed_updates', (message: any) => {
+      const processedData = JSON.parse(message);
+      this.broadcastUpdate(processedData);
+    });
   }
 
   handleConnection(client: Socket) {
