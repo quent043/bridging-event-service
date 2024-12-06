@@ -53,6 +53,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async saveProcessedDataBatch(
+    eventData: SocketBridgeEventLog,
     updates: {
       type: 'token' | 'chain';
       referenceId: string;
@@ -70,8 +71,21 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         },
       }),
     );
+    const bridgeEvent = this.bridgeEvent.create({
+      data: {
+        amount: eventData.args.amount.toString(),
+        token: eventData.args.token,
+        toChainId: Number(eventData.args.toChainId),
+        bridgeName: eventData.args.bridgeName,
+        sender: eventData.args.sender,
+        receiver: eventData.args.receiver,
+        metadata: eventData.args.metadata,
+        blockNumber: eventData.blockNumber?.toString() || '0',
+        transactionhash: eventData.transactionHash,
+      },
+    });
 
-    await this.$transaction(createOperations);
+    await this.$transaction([...createOperations, bridgeEvent]);
     this.logger.log('Batch database updates executed');
   }
 

@@ -6,9 +6,8 @@ import BigNumber from 'bignumber.js';
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly client;
-  private readonly tokenVolumeKey = 'bridge_events:total_volume';
-  private readonly chainVolumeKey = 'bridge_events:volume_by_chain';
-
+  readonly tokenVolumeKey = 'bridge_events:total_volume';
+  readonly chainVolumeKey = 'bridge_events:volume_by_chain';
   private logger: Logger = new Logger('RedisService');
 
   constructor() {
@@ -24,18 +23,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     await this.client.connect();
 
-    // Check and initialize token volume key
-    const tokenVolumeExists = await this.client.exists(this.tokenVolumeKey);
-    if (!tokenVolumeExists) {
-      await this.client.hSet(this.tokenVolumeKey, 'default', '0');
-      this.logger.log(`Initialized ${this.tokenVolumeKey} with default value 0.`);
-    }
+    try {
+      // Initialize token volume key
+      const tokenVolumeExists = await this.client.exists(this.tokenVolumeKey);
+      if (!tokenVolumeExists) {
+        await this.client.hSet(this.tokenVolumeKey, 'default', '0');
+        this.logger.log(`Initialized ${this.tokenVolumeKey} with default value 0.`);
+      }
 
-    // Check and initialize chain volume key
-    const chainVolumeExists = await this.client.exists(this.chainVolumeKey);
-    if (!chainVolumeExists) {
-      await this.client.hSet(this.chainVolumeKey, 'default', '0');
-      this.logger.log(`Initialized ${this.chainVolumeKey} with default value 0.`);
+      // Initialize chain volume key
+      const chainVolumeExists = await this.client.exists(this.chainVolumeKey);
+      if (!chainVolumeExists) {
+        await this.client.hSet(this.chainVolumeKey, 'default', '0');
+        this.logger.log(`Initialized ${this.chainVolumeKey} with default value 0.`);
+      }
+    } catch (error: any) {
+      this.logger.error('Error initializing Redis keys', error.stack || error);
+      throw new Error('Redis initialization failed');
     }
 
     this.logger.log('Redis connected');
@@ -51,20 +55,36 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async publish(channel: string, message: string): Promise<void> {
-    await this.client.publish(channel, message);
+    try {
+      await this.client.publish(channel, message);
+    } catch (error: any) {
+      this.logger.error(`Failed to publish to channel ${channel}`, error.stack || error);
+      throw new Error(`RedisService.publish failed: ${error.message}`);
+    }
   }
 
   async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
-    const subscriber = this.client.duplicate();
-    await subscriber.connect();
-    await subscriber.subscribe(channel, message => {
-      callback(message);
-    });
+    try {
+      const subscriber = this.client.duplicate();
+      await subscriber.connect();
+      await subscriber.subscribe(channel, message => {
+        callback(message);
+      });
+    } catch (error: any) {
+      this.logger.error(`Failed to subscribe to channel ${channel}`, error.stack || error);
+      throw new Error(`RedisService.subscribe failed: ${error.message}`);
+    }
   }
 
-  convertBigNumber(currentValue: string | null, increment: string): string {
+  incrementBigNumber(currentValue: string | null, increment: string): string {
     const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
     const updated = current.plus(increment);
+    return updated.toString();
+  }
+
+  decrementBigNumber(currentValue: string | null, decrement: string): string {
+    const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
+    const updated = current.minus(decrement);
     return updated.toString();
   }
 
@@ -78,54 +98,50 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const chainField = eventData.args.toChainId.toString();
     const amount = eventData.args.amount.toString();
 
-    // Step 1: Create Fetch current volumes pipeline
-    pipeline.hGet(this.tokenVolumeKey, tokenField);
-    pipeline.hGet(this.chainVolumeKey, chainField);
+    try {
+      // Fetch current volumes
+      pipeline.hGet(this.tokenVolumeKey, tokenField);
+      pipeline.hGet(this.chainVolumeKey, chainField);
+      const [currentTokenVolume, currentChainVolume] = await pipeline.exec();
 
-    const [currentTokenVolume, currentChainVolume] = await pipeline.exec();
+      const updatedTokenVolume = this.incrementBigNumber(currentTokenVolume as string, amount);
+      const updatedChainVolume = this.incrementBigNumber(currentChainVolume as string, amount);
 
-    this.logger.log('currentTokenVolume', currentTokenVolume);
-    this.logger.log('currentChainVolume', currentChainVolume);
+      // Update volumes and publish events
+      const updatePipeline = this.client.multi();
+      updatePipeline.hSet(this.tokenVolumeKey, tokenField, updatedTokenVolume);
+      updatePipeline.hSet(this.chainVolumeKey, chainField, updatedChainVolume);
+      updatePipeline.publish(
+        'bridge_events:processed_updates',
+        JSON.stringify({
+          type: 'token_update',
+          token: tokenField,
+          totalVolume: updatedTokenVolume,
+        }),
+      );
+      updatePipeline.publish(
+        'bridge_events:processed_updates',
+        JSON.stringify({
+          type: 'chain_update',
+          chainId: chainField,
+          totalVolume: updatedChainVolume,
+        }),
+      );
 
-    const updatedTokenVolume = this.convertBigNumber(currentTokenVolume as string, amount);
-    const updatedChainVolume = this.convertBigNumber(currentChainVolume as string, amount);
+      await updatePipeline.exec();
 
-    this.logger.log('updatedTokenVolume', updatedTokenVolume);
-    this.logger.log('updatedChainVolume', updatedChainVolume);
+      this.logger.log('Batch Redis updates executed successfully', {
+        updatedTokenVolume,
+        updatedChainVolume,
+      });
 
-    // Step 2: Create update pipeline
-    const updatePipeline = this.client.multi();
-
-    updatePipeline.hSet(this.tokenVolumeKey, tokenField, updatedTokenVolume);
-    updatePipeline.hSet(this.tokenVolumeKey, chainField, updatedChainVolume);
-
-    updatePipeline.publish(
-      'bridge_events:processed_updates',
-      JSON.stringify({
-        type: 'token_update',
-        token: tokenField,
-        totalVolume: updatedTokenVolume,
-      }),
-    );
-    updatePipeline.publish(
-      'bridge_events:processed_updates',
-      JSON.stringify({
-        type: 'chain_update',
-        chainId: chainField,
-        totalVolume: updatedChainVolume,
-      }),
-    );
-
-    await updatePipeline.exec();
-
-    this.logger.log('Batch Redis updates executed', {
-      updatedTokenVolume,
-      updatedChainVolume,
-    });
-
-    return {
-      updatedTokenVolume,
-      updatedChainVolume,
-    };
+      return {
+        updatedTokenVolume,
+        updatedChainVolume,
+      };
+    } catch (error: any) {
+      this.logger.error('Failed to execute batch Redis updates', error.stack || error);
+      throw new Error(`RedisService.batchBridgeEventsRedisUpdate failed: ${error.message}`);
+    }
   }
 }
