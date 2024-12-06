@@ -5,6 +5,9 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MetricsService {
+  private redisClient = this.redisService.getClient();
+  private logger: Logger = new Logger('MetricsService');
+
   constructor(
     private readonly redisService: RedisService,
     private readonly prismaService: PrismaService,
@@ -37,6 +40,23 @@ export class MetricsService {
           eventData.args.amount,
         ),
       ]);
+
+      //TODO not working
+      // await this.prismaService.transaction([
+      //   this.prismaService.saveRawEvent(eventData),
+      //   this.prismaService.saveProcessedData(
+      //       'token',
+      //       eventData.args.token,
+      //       updatedTokenVolume,
+      //       eventData.args.amount,
+      //   ),
+      //   this.prismaService.saveProcessedData(
+      //       'chain',
+      //       eventData.args.toChainId.toString(),
+      //       updatedChainVolume,
+      //       eventData.args.amount,
+      //   ),
+      // ]);
 
       this.logger.log('Event processing complete:', {
         tokenVolume: updatedTokenVolume,
