@@ -1,20 +1,13 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SocketBridgeEventLog } from '../../types';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  //TODO use ?
-  private supabase: SupabaseClient;
+  private logger: Logger = new Logger('PrismaService');
 
   constructor() {
     super();
-    this.supabase = createClient(
-      //TODO Add checks on these
-      process.env.SUPABASE_URL as string,
-      process.env.SUPABASE_KEY as string,
-    );
   }
 
   async onModuleInit() {
@@ -26,7 +19,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async saveRawEvent(eventData: SocketBridgeEventLog) {
-    await this.bridgeEvent.create({
+    this.logger.log('Persisting Raw event.');
+    return this.bridgeEvent.create({
       data: {
         amount: eventData.args.amount.toString(),
         token: eventData.args.token,
@@ -39,7 +33,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         transactionhash: eventData.transactionHash,
       },
     });
-    console.log('Raw event persisted to database.');
   }
 
   async saveProcessedData(
@@ -48,7 +41,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     totalVolume: string,
     volumeChange: bigint,
   ) {
-    await this.processedBridgeData.create({
+    this.logger.log(`Persisting data: ${type} - ${referenceId}`);
+    return this.processedBridgeData.create({
       data: {
         type,
         referenceId,
@@ -56,6 +50,34 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         volumeChange: volumeChange.toString(),
       },
     });
-    console.log(`Processed data persisted: ${type} - ${referenceId}`);
+  }
+
+  async saveProcessedDataBatch(
+    updates: {
+      type: 'token' | 'chain';
+      referenceId: string;
+      totalVolume: string;
+      volumeChange: bigint;
+    }[],
+  ): Promise<void> {
+    const createOperations = updates.map(update =>
+      this.processedBridgeData.create({
+        data: {
+          type: update.type,
+          referenceId: update.referenceId,
+          totalVolume: update.totalVolume,
+          volumeChange: update.volumeChange.toString(),
+        },
+      }),
+    );
+
+    await this.$transaction(createOperations);
+    this.logger.log('Batch database updates executed');
+  }
+
+  //TODO type this correctly
+  async transaction(operations: any[]): Promise<any[]> {
+    console.log('Persisting transaction');
+    return this.$transaction(operations);
   }
 }
