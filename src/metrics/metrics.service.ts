@@ -13,9 +13,6 @@ export class MetricsService {
     private readonly prismaService: PrismaService,
   ) {}
 
-  private redisClient = this.redisService.getClient();
-  private logger: Logger = new Logger('MetricsService');
-
   async processBridgeEvent(eventData: SocketBridgeEventLog) {
     this.logger.log('Processing event...');
 
