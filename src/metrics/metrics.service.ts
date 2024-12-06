@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
-import BigNumber from 'bignumber.js';
 import { SocketBridgeEventLog } from '../../types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -12,77 +11,53 @@ export class MetricsService {
   ) {}
 
   private redisClient = this.redisService.getClient();
+  private logger: Logger = new Logger('MetricsService');
 
-  //TODO: Implement pipelines for redis
   async processBridgeEvent(eventData: SocketBridgeEventLog) {
-    console.log('Processing event...');
+    this.logger.log('Processing event...');
+
+    const { updatedTokenVolume, updatedChainVolume } =
+      await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
     const saveRawEventPromise = this.prismaService.saveRawEvent(eventData);
 
-    const updatedTokenVolumePromise = this.redisService.incrementBigNumberInHash(
-      'bridge_events:total_volume',
+    const saveTokenPromise = this.prismaService.saveProcessedData(
+      'token',
       eventData.args.token,
-      eventData.args.amount.toString(),
+      updatedTokenVolume,
+      eventData.args.amount,
     );
 
-    const updatedChainVolumePromise = this.redisService.incrementBigNumberInHash(
-      'bridge_events:volume_by_chain',
+    const saveChainPromise = this.prismaService.saveProcessedData(
+      'chain',
       eventData.args.toChainId.toString(),
-      eventData.args.amount.toString(),
+      updatedChainVolume,
+      eventData.args.amount,
     );
 
-    const addSenderPromise = this.redisClient.sAdd(
-      'bridge_events:active_users',
-      eventData.args.sender,
-    );
+    await Promise.all([saveRawEventPromise, saveTokenPromise, saveChainPromise]);
 
-    const [updatedTokenVolume, updatedChainVolume] = await Promise.all([
-      updatedTokenVolumePromise,
-      updatedChainVolumePromise,
-    ]);
+    //TODO Not working
+    // await this.prismaService.transaction([
+    //   this.prismaService.saveRawEvent(eventData),
+    // this.prismaService.saveProcessedData(
+    //   'token',
+    //   eventData.args.token,
+    //   updatedTokenVolume,
+    //   eventData.args.amount,
+    // ),
+    // this.prismaService.saveProcessedData(
+    //   'chain',
+    //   eventData.args.toChainId.toString(),
+    //   updatedChainVolume,
+    //   eventData.args.amount,
+    // ),
+    // ]);
 
-    const publishPromises = Promise.all([
-      this.redisService.publish(
-        'bridge_events:processed_updates',
-        JSON.stringify({
-          type: 'token_update',
-          token: eventData.args.token,
-          totalVolume: updatedTokenVolume,
-        }),
-      ),
-      this.redisService.publish(
-        'bridge_events:processed_updates',
-        JSON.stringify({
-          type: 'chain_update',
-          chainId: eventData.args.toChainId.toString(),
-          totalVolume: updatedChainVolume,
-        }),
-      ),
-    ]);
-
-    const saveProcessedDataPromises = Promise.all([
-      this.prismaService.saveProcessedData(
-        'token',
-        eventData.args.token,
-        updatedTokenVolume,
-        eventData.args.amount,
-      ),
-      this.prismaService.saveProcessedData(
-        'chain',
-        eventData.args.toChainId.toString(),
-        updatedChainVolume,
-        eventData.args.amount,
-      ),
-    ]);
-
-    await Promise.all([
-      saveRawEventPromise,
-      addSenderPromise,
-      publishPromises,
-      saveProcessedDataPromises,
-    ]);
-
-    console.log('Published updates for token and chain volumes');
+    this.logger.log('Event processing complete:', {
+      tokenVolume: updatedTokenVolume,
+      chainVolume: updatedChainVolume,
+    });
   }
 
   // Get the total volume for all tokens
