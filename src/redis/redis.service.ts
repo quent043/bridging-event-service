@@ -27,14 +27,24 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       // Initialize token volume key
       const tokenVolumeExists = await this.client.exists(this.tokenVolumeKey);
       if (!tokenVolumeExists) {
-        await this.client.hSet(this.tokenVolumeKey, 'default', '0');
+        /**
+         * @dev: Set a default value for a token to 0 to avoid null values
+         */
+        await this.client.hSet(
+          this.tokenVolumeKey,
+          '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+          '0',
+        );
         this.logger.log(`Initialized ${this.tokenVolumeKey} with default value 0.`);
       }
 
       // Initialize chain volume key
       const chainVolumeExists = await this.client.exists(this.chainVolumeKey);
       if (!chainVolumeExists) {
-        await this.client.hSet(this.chainVolumeKey, 'default', '0');
+        /**
+         * @dev: Set a default value for a chain Id to 0 to avoid null values
+         */
+        await this.client.hSet(this.chainVolumeKey, '8453', '0');
         this.logger.log(`Initialized ${this.chainVolumeKey} with default value 0.`);
       }
     } catch (error: any) {

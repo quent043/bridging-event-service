@@ -110,7 +110,7 @@ export class MetricsService {
     const operationRetry = retry.operation(options);
 
     return new Promise<T>((resolve, reject) => {
-      operationRetry.attempt(async currentAttempt => {
+      operationRetry.attempt(async (currentAttempt: any) => {
         try {
           this.logger.log(`Attempting ${operationName}, attempt #${currentAttempt}`);
           const result = await operation();
