@@ -40,7 +40,7 @@ export class MetricsService {
     } catch (error: any) {
       this.logger.error('Failed to process bridge event', error.stack);
 
-      // Rollback if Redis succeeded but DB failed
+      //TODO remove rollback....
       if (updatedTokenVolume && updatedChainVolume) {
         await this.redisService.rollbackRedis(eventData, updatedTokenVolume, updatedChainVolume);
       }
