@@ -17,7 +17,7 @@ export class BridgeEventListenerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    console.log('Initializing event listener...');
+    this.logger.log('Initializing event listener...');
     this.listenToEvents();
   }
 
@@ -35,7 +35,7 @@ export class BridgeEventListenerService implements OnModuleInit {
           await Promise.all(
             logs.map(async (log: Log) => {
               const socketLog = log as unknown as SocketBridgeEventLog;
-              console.log(
+              this.logger.log(
                 'Raw Event Log Received:',
                 socketLog.eventName.toString(),
                 socketLog.blockNumber?.toString(),

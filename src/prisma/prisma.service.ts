@@ -77,7 +77,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   //TODO type this correctly
   async transaction(operations: any[]): Promise<any[]> {
-    console.log('Persisting transaction');
+    this.logger.log('Persisting transaction');
     return this.$transaction(operations);
   }
 }
