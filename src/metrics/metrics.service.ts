@@ -19,13 +19,13 @@ export class MetricsService {
 
     const saveRawEventPromise = this.prismaService.saveRawEvent(eventData);
 
-    const updatedTokenVolumePromise = this.incrementBigNumberInHash(
+    const updatedTokenVolumePromise = this.redisService.incrementBigNumberInHash(
       'bridge_events:total_volume',
       eventData.args.token,
       eventData.args.amount.toString(),
     );
 
-    const updatedChainVolumePromise = this.incrementBigNumberInHash(
+    const updatedChainVolumePromise = this.redisService.incrementBigNumberInHash(
       'bridge_events:volume_by_chain',
       eventData.args.toChainId.toString(),
       eventData.args.amount.toString(),
@@ -83,24 +83,6 @@ export class MetricsService {
     ]);
 
     console.log('Published updates for token and chain volumes');
-  }
-
-  //TODO: Belongs in redis utils
-  // Private function to handle BigNumber operations with Redis
-  private async incrementBigNumberInHash(
-    hashKey: string,
-    field: string,
-    amount: string,
-  ): Promise<string> {
-    const currentVolumeStr = await this.redisClient.hGet(hashKey, field);
-    const currentVolume = currentVolumeStr ? new BigNumber(currentVolumeStr) : new BigNumber(0);
-    const updatedVolume = currentVolume.plus(amount);
-
-    await this.redisClient.hSet(hashKey, field, updatedVolume.toString());
-
-    console.log(`Updated ${hashKey} [${field}]: ${updatedVolume.toString()}`);
-
-    return updatedVolume.toString();
   }
 
   // Get the total volume for all tokens

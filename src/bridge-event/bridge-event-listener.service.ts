@@ -29,6 +29,7 @@ export class BridgeEventListenerService implements OnModuleInit {
       eventName,
       onLogs: async (logs: Log[]) => {
         for (const log of logs as unknown as SocketBridgeEventLog[]) {
+          console.log('Number of events received:', logs.length);
           console.log(
             'Raw Event Log Received:',
             log.eventName.toString(),
@@ -39,10 +40,41 @@ export class BridgeEventListenerService implements OnModuleInit {
           try {
             await this.metricsService.processBridgeEvent(log);
           } catch (error) {
-            console.error('Failed to decode event log:', error);
+            console.error('Failed to process event log:', error);
           }
         }
       },
     });
   }
 }
+
+// private async listenToEvents() {
+//   const eventName = 'SocketBridge';
+//
+//   this.publicClient.watchContractEvent({
+//     address: this.contractAddress as `0x${string}`,
+//     //TODO: need other events in ABI  ?
+//     abi: this.abi,
+//     eventName,
+//     onLogs: async (logs: Log[]) => {
+//       for (const log of logs as unknown as SocketBridgeEventLog[]) {
+//         console.log('Number of events received:', logs.length);
+//         console.log(
+//             'Raw Event Log Received:',
+//             log.eventName.toString(),
+//             log.blockNumber?.toString(),
+//             log.args.amount.toString(),
+//             log.args.toChainId.toString(),
+//         );
+//         try {
+//           await this.metricsService.processBridgeEvent(log);
+//         } catch (error) {
+//           console.error('Failed to process event log:', error);
+//         }
+//       }
+//     },
+//   });
+// }
+// }
+//
+// optimise here with promise all in the loop
