@@ -9,7 +9,7 @@ export class BridgeEventListenerService implements OnModuleInit {
   private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
   private readonly abi = SocketGatewayABI;
 
-  private logger: Logger = new Logger('MetricsGateway');
+  private logger: Logger = new Logger('BridgeEventListenerService');
 
   constructor(
     @Inject('PUBLIC_CLIENT') private publicClient: PublicClient,
