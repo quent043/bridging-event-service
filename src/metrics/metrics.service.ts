@@ -71,7 +71,7 @@ export class MetricsService {
       //   ),
       // ]);
 
-      await this.prismaService.saveProcessedDataBatch(eventData, [
+      await this.prismaService.saveProcessedBridgeEventDataBatch(eventData, [
         {
           type: 'token',
           referenceId: eventData.args.token,
