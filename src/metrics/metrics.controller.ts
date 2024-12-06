@@ -14,9 +14,4 @@ export class MetricsController {
   async getTotalVolumeByChain() {
     return await this.metricsService.getTotalVolumeByChain();
   }
-
-  @Get('active_users')
-  async getTotalActiveUsers() {
-    return await this.metricsService.getTotalActiveUsers();
-  }
 }
