@@ -3,7 +3,6 @@
 
 The **Bridging Event Service** is a backend system designed for real-time monitoring of bridged tokens. It collects, processes, and serves live updates on token bridging events using WebSocket and RESTful APIs. It also stores historical data for analytics and reporting.
 
-
 ---
 
 ## 💻 Tech Stack
@@ -35,19 +34,17 @@ If you choose **not** to use Docker, you'll need to install and run PostgreSQL a
 
 ---
 
-### 🌐 Environment Variable
+### 🐋 Option 1: **With Docker (Recommended)**
 
-The service requires only one environment variable:
+#### Environment Variables
+
+Update the `.env` file with the required environment variable:
 
 ```plaintext
 ETH_RPC_URL=<your_ethereum_rpc_url>
 ```
 
 Replace `<your_ethereum_rpc_url>` with a valid Ethereum RPC URL (e.g., from Infura or Alchemy).
-
----
-
-### Option 1: **With Docker (Recommended)**
 
 1. Clone the repository:
    ```bash
@@ -69,7 +66,22 @@ The backend server will be running at `http://localhost:3000`.
 
 ---
 
-### Option 2: **Without Docker**
+### 🐧 Option 2: **Without Docker**
+
+#### Environment Variables
+
+Update the `.env` file with the required environment variables:
+
+```plaintext
+ETH_RPC_URL=<your_ethereum_rpc_url>
+DATABASE_URL=<your_postgresql_url>
+REDIS_URL=<your_redis_url>
+```
+
+- Replace `<your_ethereum_rpc_url>` with a valid Ethereum RPC URL (e.g., from Infura or Alchemy).
+- Replace `<your_postgresql_url>` with your PostgreSQL database connection string (e.g., postgres://<user>:<password>@<host>:<port>/<database>).
+- Replace `<your_redis_url>` with your Redis connection string (e.g., <username>:<password>@<host>:<port>).
+
 
 1. Clone the repository:
    ```bash
@@ -84,17 +96,7 @@ The backend server will be running at `http://localhost:3000`.
 
 3. Install and configure PostgreSQL and Redis manually.
 
-4. Update the `.env` file with the required environment variables:
-
-```plaintext
-ETH_RPC_URL=<your_ethereum_rpc_url>
-DATABASE_URL=<your_postgresql_url>
-REDIS_URL=<your_redis_url>
-```
-
-- Replace `<your_ethereum_rpc_url>` with a valid Ethereum RPC URL (e.g., from Infura or Alchemy).
-- Replace `<your_postgresql_url>` with your PostgreSQL database connection string (e.g., postgres://<user>:<password>@<host>:<port>/<database>).
-- Replace `<your_redis_url>` with your Redis connection string (e.g., <username>:<password>@<host>:<port>).
+4. Update the `.env` file with the required environment variables (as detailed above).
 
 5. Run database migrations:
    ```bash
@@ -115,41 +117,55 @@ The backend server will be running at `http://localhost:3000`.
 ### REST Endpoints
 
 1. **GET `/metrics/total_volume`**
-   - **Description:** Retrieves the total volume of all bridged tokens.
-   - **Example Response:**
-     ```json
-     {
-       "message": "Total volume retrieved successfully",
-       "data": {
-         "0xTokenAddress1": 123456789.01,
-         "0xTokenAddress2": 987654321.99
-       }
-     }
-     ```
+    - **Description:** Retrieves the total volume of all bridged tokens.
+    - **Example Response:**
+      ```json
+      {
+        "message": "Total volume retrieved successfully",
+        "data": {
+          "0xTokenAddress1": 123456789.01,
+          "0xTokenAddress2": 987654321.99
+        }
+      }
+      ```
 
 2. **GET `/metrics/total_volume_by_chain`**
-   - **Description:** Retrieves the total volume of tokens bridged per chain.
-   - **Example Response:**
-     ```json
-     {
-       "message": "Total volume by chain retrieved successfully",
-       "data": {
-         "1": 123456789.01,
-         "137": 987654321.99
-       }
-     }
-     ```
+    - **Description:** Retrieves the total volume of tokens bridged per chain.
+    - **Example Response:**
+      ```json
+      {
+        "message": "Total volume by chain retrieved successfully",
+        "data": {
+          "1": 123456789.01,
+          "137": 987654321.99
+        }
+      }
+      ```
+
+3. **GET `/metrics/bridge_usage`**
+    - **Description:** Retrieves the usage count for each bridge.
+    - **Example Response:**
+      ```json
+      {
+        "message": "Bridge usage counts retrieved successfully",
+        "data": {
+          "BridgeName1": 150,
+          "BridgeName2": 75
+        }
+      }
+      ```
 
 ---
 
 ### 🔌 WebSocket
 
-The WebSocket streams live updates for token and chain volumes.
+The WebSocket streams live updates for token and chain volumes, as well as bridge usage counts.
 
 - **Connection URL:** `ws://localhost:3000`
 - **Events:**
-   - `token_volume_update`: Provides updates for token volumes.
-   - `chain_volume_update`: Provides updates for chain volumes.
+    - `token_volume_update`: Provides updates for token volumes.
+    - `chain_volume_update`: Provides updates for chain volumes.
+    - `bridge_usage_update`: Provides updates for bridge usage counts.
 
 **Example WebSocket Integration:**
 
@@ -166,6 +182,11 @@ socket.on("token_volume_update", ({ token, totalVolume }) => {
 // Listen for chain volume updates
 socket.on("chain_volume_update", ({ chainId, totalVolume }) => {
   console.log(`Chain: ${chainId}, Volume: ${totalVolume}`);
+});
+
+// Listen for bridge usage updates
+socket.on("bridge_usage_update", ({ bridgeName, usageCount }) => {
+  console.log(`Bridge: ${bridgeName}, Usage Count: ${usageCount}`);
 });
 ```
 
@@ -196,4 +217,3 @@ A live frontend dashboard for the Bridging Event Service is available here:
    ```
 
 The dashboard will be available at `http://localhost:3001`.
-

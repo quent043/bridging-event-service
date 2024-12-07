@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SocketBridgeEventLog } from '../../types';
+import { BridgeDataType } from '@prisma/client';
 
 @Injectable()
 export class MetricsService {
@@ -18,6 +19,7 @@ export class MetricsService {
 
     let updatedTokenVolume = '';
     let updatedChainVolume = '';
+    let updatedBridgeUseCount = '';
 
     try {
       // Step 1: Update Redis
@@ -25,9 +27,15 @@ export class MetricsService {
 
       updatedTokenVolume = redisResult.updatedTokenVolume;
       updatedChainVolume = redisResult.updatedChainVolume;
+      updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
 
       // Step 2: Persist to Database
-      await this.persistToDatabase(eventData, updatedTokenVolume, updatedChainVolume);
+      await this.persistToDatabase(
+        eventData,
+        updatedTokenVolume,
+        updatedChainVolume,
+        updatedBridgeUseCount,
+      );
 
       this.logger.log('Event processed successfully');
     } catch (error: any) {
@@ -40,20 +48,27 @@ export class MetricsService {
     eventData: SocketBridgeEventLog,
     updatedTokenVolume: string,
     updatedChainVolume: string,
+    bridgeUseCount: string,
   ) {
     try {
       await this.prismaService.saveProcessedBridgeEventDataBatch(eventData, [
         {
-          type: 'token',
+          type: BridgeDataType.TOKEN_VOLUME,
           referenceId: eventData.args.token,
-          totalVolume: updatedTokenVolume,
+          totalVolume: updatedTokenVolume.toString(),
           volumeChange: eventData.args.amount,
         },
         {
-          type: 'chain',
+          type: BridgeDataType.CHAIN_VOLUME,
           referenceId: eventData.args.toChainId.toString(),
-          totalVolume: updatedChainVolume,
+          totalVolume: updatedChainVolume.toString(),
           volumeChange: eventData.args.amount,
+        },
+        {
+          type: BridgeDataType.BRIDGE_USE_COUNT,
+          referenceId: eventData.args.bridgeName,
+          totalVolume: bridgeUseCount.toString(),
+          volumeChange: 1n,
         },
       ]);
 
@@ -88,6 +103,18 @@ export class MetricsService {
     } catch (error: any) {
       this.logger.error('Failed to retrieve total volume by chain', error.stack || error);
       throw new Error(`MetricsService.getTotalVolumeByChain failed: ${error.message}`);
+    }
+  }
+
+  async getBridgeUsageCount(): Promise<Record<string, number>> {
+    try {
+      const bridgeUsageCounts = await this.redisClient.hGetAll('bridge_events:usage_count');
+      return Object.fromEntries(
+        Object.entries(bridgeUsageCounts).map(([bridgeName, count]) => [bridgeName, Number(count)]),
+      );
+    } catch (error: any) {
+      this.logger.error('Failed to retrieve bridge usage count', error.stack || error);
+      throw new Error(`MetricsService.getBridgeUsageCount failed: ${error.message}`);
     }
   }
 }

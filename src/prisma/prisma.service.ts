@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { BridgeDataType, PrismaClient } from '@prisma/client';
 import { SocketBridgeEventLog } from '../../types';
 
 @Injectable()
@@ -36,7 +36,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async saveProcessedData(
-    type: 'token' | 'chain',
+    type: BridgeDataType,
     referenceId: string,
     totalVolume: string,
     volumeChange: bigint,
@@ -55,7 +55,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async saveProcessedBridgeEventDataBatch(
     eventData: SocketBridgeEventLog,
     updates: {
-      type: 'token' | 'chain';
+      type: BridgeDataType;
       referenceId: string;
       totalVolume: string;
       volumeChange: bigint;

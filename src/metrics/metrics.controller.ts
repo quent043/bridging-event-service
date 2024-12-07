@@ -42,4 +42,23 @@ export class MetricsController {
       );
     }
   }
+
+  @Get('bridge_usage_count')
+  async getBridgeUsageCount() {
+    try {
+      const result = await this.metricsService.getBridgeUsageCount();
+      return {
+        message: 'Bridge usage count retrieved successfully',
+        data: result,
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          message: 'Failed to retrieve bridge usage count',
+          details: error,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

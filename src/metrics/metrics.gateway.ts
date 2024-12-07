@@ -42,16 +42,30 @@ export class MetricsGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 
   private broadcastUpdate(update: any) {
-    if (update.type === 'token_update') {
-      this.server.emit('token_volume_update', {
-        token: update.token,
-        totalVolume: update.totalVolume,
-      });
-    } else if (update.type === 'chain_update') {
-      this.server.emit('chain_volume_update', {
-        chainId: update.chainId,
-        totalVolume: update.totalVolume,
-      });
+    switch (update.type) {
+      case 'token_update':
+        this.server.emit('token_volume_update', {
+          token: update.token,
+          totalVolume: update.totalVolume,
+        });
+        break;
+
+      case 'chain_update':
+        this.server.emit('chain_volume_update', {
+          chainId: update.chainId,
+          totalVolume: update.totalVolume,
+        });
+        break;
+
+      case 'bridge_usage_update':
+        this.server.emit('bridge_usage_update', {
+          bridge: update.bridge,
+          usageCount: update.usageCount,
+        });
+        break;
+
+      default:
+        console.warn(`Unknown update type: ${update.type}`);
     }
   }
 }

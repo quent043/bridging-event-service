@@ -101,6 +101,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async batchBridgeEventsRedisUpdate(eventData: SocketBridgeEventLog): Promise<{
     updatedTokenVolume: string;
     updatedChainVolume: string;
+    updatedBridgeUseCount: string;
   }> {
     const pipeline = this.client.multi();
 
@@ -109,10 +110,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const amount = eventData.args.amount.toString();
 
     try {
-      // Fetch current volumes
+      // Fetch current token volumes
       pipeline.hGet(this.tokenVolumeKey, tokenField);
       pipeline.hGet(this.chainVolumeKey, chainField);
-      const [currentTokenVolume, currentChainVolume] = await pipeline.exec();
+
+      // Increment bridge usage
+      pipeline.hIncrBy('bridge_usage', eventData.args.bridgeName, 1);
+
+      const [currentTokenVolume, currentChainVolume, bridgeUsageCount] = await pipeline.exec();
 
       const updatedTokenVolume = this.incrementBigNumber(currentTokenVolume as string, amount);
       const updatedChainVolume = this.incrementBigNumber(currentChainVolume as string, amount);
@@ -137,6 +142,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           totalVolume: updatedChainVolume,
         }),
       );
+      updatePipeline.publish(
+        'bridge_events:processed_updates',
+        JSON.stringify({
+          type: 'bridge_usage_update',
+          bridge: eventData.args.bridgeName,
+          usageCount: bridgeUsageCount,
+        }),
+      );
 
       await updatePipeline.exec();
 
@@ -145,9 +158,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         updatedChainVolume,
       });
 
+      const updatedBridgeUseCount = bridgeUsageCount as string;
+
       return {
         updatedTokenVolume,
         updatedChainVolume,
+        updatedBridgeUseCount,
       };
     } catch (error: any) {
       this.logger.error('Failed to execute batch Redis updates', error.stack || error);

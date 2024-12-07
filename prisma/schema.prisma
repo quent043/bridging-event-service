@@ -32,7 +32,7 @@ model BridgeEvent {
 model ProcessedBridgeData {
   id           Int            @id @default(autoincrement())
   type         BridgeDataType
-  referenceId  String // token address or chain id
+  referenceId  String // token address, chain id or Bridge name
   volumeChange String
   totalVolume  String
   timestamp    DateTime       @default(now())
@@ -42,6 +42,7 @@ model ProcessedBridgeData {
 }
 
 enum BridgeDataType {
-  token
-  chain
+  TOKEN_VOLUME
+  CHAIN_VOLUME
+  BRIDGE_USE_COUNT
 }
