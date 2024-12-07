@@ -217,3 +217,18 @@ A live frontend dashboard for the Bridging Event Service is available here:
    ```
 
 The dashboard will be available at `http://localhost:3001`.
+
+
+## ⚠️ Troubleshooting: Authentication Failed Against Database Server
+
+If you encounter the error:
+
+```
+Authentication failed against database server at `localhost`, the provided database credentials for `(not available)` are not valid.
+```
+
+When running the Docker deployment, this error could occur if a local PostgreSQL instance is running on your system and conflicting with the PostgreSQL instance running inside Docker. When Prisma or your application tries to connect, it may inadvertently connect to the local PostgreSQL instead of the containerized one.
+
+**Solution: Stop the Local PostgreSQL Instance**
+
+
