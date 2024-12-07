@@ -1,4 +1,20 @@
+version: "3.8"
+
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app-container
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:bibibibibibi@postgres:5432/mydb"
+      REDIS_URL: "redis://redis:6379"
+    depends_on:
+      - redis
+      - postgres
+
   redis:
     image: redis
     container_name: redis-container
@@ -13,9 +29,9 @@ services:
       - "5432:5432"
     restart: always
     environment:
-      POSTGRES_USER: yourusername
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: yourdatabase
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: bibibibibibi
+      POSTGRES_DB: mydb
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
