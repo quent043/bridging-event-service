@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SocketBridgeEventLog } from '../../types';
-import retry from 'retry';
 
 @Injectable()
 export class MetricsService {
@@ -22,29 +21,17 @@ export class MetricsService {
 
     try {
       // Step 1: Update Redis
-      const redisResult = await this.retryOperation(
-        async () => this.redisService.batchBridgeEventsRedisUpdate(eventData),
-        'Redis batchBridgeEventsRedisUpdate',
-      );
+      const redisResult = await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
       updatedTokenVolume = redisResult.updatedTokenVolume;
       updatedChainVolume = redisResult.updatedChainVolume;
 
       // Step 2: Persist to Database
-      await this.retryOperation(
-        async () => this.persistToDatabase(eventData, updatedTokenVolume, updatedChainVolume),
-        'Database persistToDatabase',
-      );
+      await this.persistToDatabase(eventData, updatedTokenVolume, updatedChainVolume);
 
       this.logger.log('Event processed successfully');
     } catch (error: any) {
       this.logger.error('Failed to process bridge event', error.stack);
-
-      //TODO remove rollback....
-      if (updatedTokenVolume && updatedChainVolume) {
-        await this.redisService.rollbackRedis(eventData, updatedTokenVolume, updatedChainVolume);
-      }
-
       throw new Error('Failed to process bridge event with consistency');
     }
   }
@@ -55,22 +42,6 @@ export class MetricsService {
     updatedChainVolume: string,
   ) {
     try {
-      // await Promise.all([
-      //   this.prismaService.saveRawEvent(eventData),
-      //   this.prismaService.saveProcessedData(
-      //     'token',
-      //     eventData.args.token,
-      //     updatedTokenVolume,
-      //     eventData.args.amount,
-      //   ),
-      //   this.prismaService.saveProcessedData(
-      //     'chain',
-      //     eventData.args.toChainId.toString(),
-      //     updatedChainVolume,
-      //     eventData.args.amount,
-      //   ),
-      // ]);
-
       await this.prismaService.saveProcessedBridgeEventDataBatch(eventData, [
         {
           type: 'token',
@@ -94,39 +65,6 @@ export class MetricsService {
       this.logger.error('Failed to persist data to the database', error.stack);
       throw error;
     }
-  }
-
-  /**
-   * Retry an operation with customizable options.
-   * @param operation - The asynchronous operation to retry.
-   * @param operationName - A name for the operation, used for logging.
-   * @param options - Retry options (refer to `retry` documentation).
-   */
-  private async retryOperation<T>(
-    operation: () => Promise<T>,
-    operationName: string,
-    options: retry.OperationOptions = { retries: 3, factor: 2, minTimeout: 200, maxTimeout: 2000 },
-  ): Promise<T> {
-    const operationRetry = retry.operation(options);
-
-    return new Promise<T>((resolve, reject) => {
-      operationRetry.attempt(async (currentAttempt: any) => {
-        try {
-          this.logger.log(`Attempting ${operationName}, attempt #${currentAttempt}`);
-          const result = await operation();
-          resolve(result);
-        } catch (error: any) {
-          this.logger.warn(
-            `${operationName} failed on attempt #${currentAttempt}: ${error.message}`,
-          );
-
-          if (!operationRetry.retry(error)) {
-            this.logger.error(`${operationName} failed after ${currentAttempt} attempts`);
-            reject(error);
-          }
-        }
-      });
-    });
   }
 
   async getTotalVolumePerToken(): Promise<Record<string, number>> {

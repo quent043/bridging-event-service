@@ -154,30 +154,4 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       throw new Error(`RedisService.batchBridgeEventsRedisUpdate failed: ${error.message}`);
     }
   }
-
-  async rollbackRedis(
-    eventData: SocketBridgeEventLog,
-    updatedTokenVolume: string,
-    updatedChainVolume: string,
-  ) {
-    const pipeline = this.client.multi();
-
-    try {
-      const tokenField = eventData.args.token;
-      const chainField = eventData.args.toChainId.toString();
-
-      // Convert string volumes to numbers for decrement
-      const tokenDecrement = -parseFloat(updatedTokenVolume);
-      const chainDecrement = -parseFloat(updatedChainVolume);
-
-      // Revert Redis volumes
-      pipeline.hIncrByFloat(this.tokenVolumeKey, tokenField, tokenDecrement);
-      pipeline.hIncrByFloat(this.chainVolumeKey, chainField, chainDecrement);
-
-      await pipeline.exec();
-      this.logger.log('Redis rollback completed');
-    } catch (rollbackError: any) {
-      this.logger.error('Failed to rollback Redis changes', rollbackError.stack);
-    }
-  }
 }
