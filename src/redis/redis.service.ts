@@ -8,6 +8,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly client;
   readonly tokenVolumeKey = 'bridge_events:total_volume';
   readonly chainVolumeKey = 'bridge_events:volume_by_chain';
+  readonly bridgeUsageKey = 'bridge_events:bridge_usage';
   private logger: Logger = new Logger('RedisService');
 
   constructor() {
@@ -115,12 +116,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       pipeline.hGet(this.chainVolumeKey, chainField);
 
       // Increment bridge usage
-      pipeline.hIncrBy('bridge_usage', eventData.args.bridgeName, 1);
+      pipeline.hIncrBy(this.bridgeUsageKey, eventData.args.bridgeName, 1);
 
       const [currentTokenVolume, currentChainVolume, bridgeUsageCount] = await pipeline.exec();
 
       const updatedTokenVolume = this.incrementBigNumber(currentTokenVolume as string, amount);
       const updatedChainVolume = this.incrementBigNumber(currentChainVolume as string, amount);
+      const updatedBridgeUseCount = bridgeUsageCount as string;
 
       // Update volumes and publish events
       const updatePipeline = this.client.multi();
@@ -153,12 +155,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       await updatePipeline.exec();
 
-      this.logger.log('Batch Redis updates executed successfully', {
-        updatedTokenVolume,
-        updatedChainVolume,
-      });
-
-      const updatedBridgeUseCount = bridgeUsageCount as string;
+      this.logger.log('Batch Redis updates executed successfully');
 
       return {
         updatedTokenVolume,

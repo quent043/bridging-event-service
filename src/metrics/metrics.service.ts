@@ -71,11 +71,6 @@ export class MetricsService {
           volumeChange: 1n,
         },
       ]);
-
-      this.logger.log('Event processing complete:', {
-        tokenVolume: updatedTokenVolume,
-        chainVolume: updatedChainVolume,
-      });
     } catch (error: any) {
       this.logger.error('Failed to persist data to the database', error.stack);
       throw error;
@@ -108,7 +103,7 @@ export class MetricsService {
 
   async getBridgeUsageCount(): Promise<Record<string, number>> {
     try {
-      const bridgeUsageCounts = await this.redisClient.hGetAll('bridge_events:usage_count');
+      const bridgeUsageCounts = await this.redisClient.hGetAll('bridge_events:bridge_usage');
       return Object.fromEntries(
         Object.entries(bridgeUsageCounts).map(([bridgeName, count]) => [bridgeName, Number(count)]),
       );
