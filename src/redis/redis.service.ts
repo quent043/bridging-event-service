@@ -131,15 +131,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
 
     try {
-      // Fetch current token volume
+      // Fetch current token volume & Tx Count
       pipeline.hGet(this.tokenVolumeKey, tokenField);
-
+      // pipeline.hGet(this.chainTxCountKey, chainField);
       // Increment bridge usage & transaction count
       pipeline.hIncrBy(this.bridgeUsageKey, eventData.args.bridgeName, 1);
       pipeline.hIncrBy(this.chainTxCountKey, eventData.args.toChainId.toString(), 1);
 
       const [currentTokenVolume, chainTxCount, bridgeUsageCount] = await pipeline.exec();
-
+      console.log('currentTokenVolume', currentTokenVolume);
+      console.log('chainTxCount', chainTxCount);
+      console.log('bridgeUsageCount', bridgeUsageCount);
       const updatedTokenVolume = this.incrementBigNumber(
         currentTokenVolume as string,
         normalizedAmount,

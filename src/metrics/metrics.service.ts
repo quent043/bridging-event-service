@@ -29,6 +29,8 @@ export class MetricsService {
       updatedChainTransactionCount = redisResult.updatedChainTxCount;
       updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
 
+      console.log('updatedChainTransactionCount', updatedChainTransactionCount);
+
       // Step 2: Persist to Database
       await this.persistToDatabase(
         eventData,
