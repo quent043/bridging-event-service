@@ -1,99 +1,199 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# Bridging Event Service
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The **Bridging Event Service** is a backend system designed for real-time monitoring of bridged tokens. It collects, processes, and serves live updates on token bridging events using WebSocket and RESTful APIs. It also stores historical data for analytics and reporting.
 
-## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## 💻 Tech Stack
 
-```bash
-$ npm install
+The service leverages the following technologies:
+
+- **[NestJS](https://nestjs.com/):** Framework for building efficient, scalable server-side applications.
+- **[Prisma](https://www.prisma.io/):** ORM for interacting with a PostgreSQL database.
+- **[Redis](https://redis.io/):** High-performance in-memory datastore for caching and live updates.
+- **[PostgreSQL](https://www.postgresql.org/):** Relational database for persistent storage.
+- **[Socket.IO](https://socket.io/):** Enables real-time, bi-directional communication.
+- **[Docker](https://www.docker.com/):** Simplifies containerization and deployment.
+
+---
+
+## 🚀 Setup and Launch
+
+### **Note**
+
+**Docker is used for convenience purposes**—preconfigured passwords, users, and databases are already set in the included `docker-compose.yml`.  
+If you choose **not** to use Docker, you'll need to install and run PostgreSQL and Redis manually, replacing the environment variables with your own credentials.
+
+---
+
+### 🔧 Prerequisites
+
+- **Node.js** (>= 16.x)
+- **Docker** (optional but recommended for containerized setup)
+
+---
+
+### 🌐 Environment Variable
+
+The service requires only one environment variable:
+
+```plaintext
+ETH_RPC_URL=<your_ethereum_rpc_url>
 ```
 
-## Compile and run the project
+Replace `<your_ethereum_rpc_url>` with a valid Ethereum RPC URL (e.g., from Infura or Alchemy).
 
-```bash
-# development
-$ npm run start
+---
 
-# watch mode
-$ npm run start:dev
+### Option 1: **With Docker (Recommended)**
 
-# production mode
-$ npm run start:prod
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/quent043/bridging-event-service.git
+   cd bridging-event-service
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the service:
+   ```bash
+   npm run start:with-docker
+   ```
+
+The backend server will be running at `http://localhost:3000`.
+
+---
+
+### Option 2: **Without Docker**
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/quent043/bridging-event-service.git
+   cd bridging-event-service
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Install and configure PostgreSQL and Redis manually.
+
+4. Update the `.env` file with the required environment variables:
+
+```plaintext
+ETH_RPC_URL=<your_ethereum_rpc_url>
+DATABASE_URL=<your_postgresql_url>
+REDIS_URL=<your_redis_url>
 ```
 
-## Run tests
+- Replace `<your_ethereum_rpc_url>` with a valid Ethereum RPC URL (e.g., from Infura or Alchemy).
+- Replace `<your_postgresql_url>` with your PostgreSQL database connection string (e.g., postgres://<user>:<password>@<host>:<port>/<database>).
+- Replace `<your_redis_url>` with your Redis connection string (e.g., <username>:<password>@<host>:<port>).
 
-```bash
-# unit tests
-$ npm run test
+5. Run database migrations:
+   ```bash
+   npm run db:setup
+   ```
 
-# e2e tests
-$ npm run test:e2e
+6. Start the backend server:
+   ```bash
+   npm run start:dev
+   ```
 
-# test coverage
-$ npm run test:cov
+The backend server will be running at `http://localhost:3000`.
+
+---
+
+## 📈 API Endpoints
+
+### REST Endpoints
+
+1. **GET `/metrics/total_volume`**
+   - **Description:** Retrieves the total volume of all bridged tokens.
+   - **Example Response:**
+     ```json
+     {
+       "message": "Total volume retrieved successfully",
+       "data": {
+         "0xTokenAddress1": 123456789.01,
+         "0xTokenAddress2": 987654321.99
+       }
+     }
+     ```
+
+2. **GET `/metrics/total_volume_by_chain`**
+   - **Description:** Retrieves the total volume of tokens bridged per chain.
+   - **Example Response:**
+     ```json
+     {
+       "message": "Total volume by chain retrieved successfully",
+       "data": {
+         "1": 123456789.01,
+         "137": 987654321.99
+       }
+     }
+     ```
+
+---
+
+### 🔌 WebSocket
+
+The WebSocket streams live updates for token and chain volumes.
+
+- **Connection URL:** `ws://localhost:3000`
+- **Events:**
+   - `token_volume_update`: Provides updates for token volumes.
+   - `chain_volume_update`: Provides updates for chain volumes.
+
+**Example WebSocket Integration:**
+
+```javascript
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:3000");
+
+// Listen for token volume updates
+socket.on("token_volume_update", ({ token, totalVolume }) => {
+  console.log(`Token: ${token}, Volume: ${totalVolume}`);
+});
+
+// Listen for chain volume updates
+socket.on("chain_volume_update", ({ chainId, totalVolume }) => {
+  console.log(`Chain: ${chainId}, Volume: ${totalVolume}`);
+});
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 🖥️ Demo Frontend Integration
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+A live frontend dashboard for the Bridging Event Service is available here:
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+**[Frontend Repository](https://github.com/quent043/bridging-event-service-frontend)**
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Frontend Setup
 
-## Resources
+1. Clone the frontend repository:
+   ```bash
+   git clone https://github.com/quent043/bridging-event-service-frontend.git
+   cd bridging-event-service-frontend
+   ```
 
-Check out a few resources that may come in handy when working with NestJS:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Support
+The dashboard will be available at `http://localhost:3001`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
