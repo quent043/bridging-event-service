@@ -24,18 +24,18 @@ export class MetricsController {
     }
   }
 
-  @Get('total_volume_by_chain')
+  @Get('total_transactions_by_chain')
   async getTotalVolumeByChain() {
     try {
-      const result = await this.metricsService.getTotalVolumeByChain();
+      const result = await this.metricsService.getTotalTransactionCountByChain();
       return {
-        message: 'Total volume by chain retrieved successfully',
+        message: 'Total transaction count by chain retrieved successfully',
         data: result,
       };
     } catch (error: any) {
       throw new HttpException(
         {
-          message: 'Failed to retrieve total volume by chain',
+          message: 'Failed to retrieve total transaction count by chain',
           details: error,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,

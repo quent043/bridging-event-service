@@ -129,15 +129,15 @@ The backend server will be running at `http://localhost:3000`.
       }
       ```
 
-2. **GET `/metrics/total_volume_by_chain`**
-    - **Description:** Retrieves the total volume of tokens bridged per chain.
+2. **GET `/metrics/total_transactions_by_chain`**
+    - **Description:** Retrieves the total count of transactions of tokens bridged per chain.
     - **Example Response:**
       ```json
       {
-        "message": "Total volume by chain retrieved successfully",
+        "message": "Total transactions count by chain retrieved successfully",
         "data": {
-          "1": 123456789.01,
-          "137": 987654321.99
+          "1": 1234,
+          "137": 987654
         }
       }
       ```
@@ -164,7 +164,7 @@ The WebSocket streams live updates for token and chain volumes, as well as bridg
 - **Connection URL:** `ws://localhost:3000`
 - **Events:**
     - `token_volume_update`: Provides updates for token volumes.
-    - `chain_volume_update`: Provides updates for chain volumes.
+    - `transactions_per_chain_update`: Provides updates for chain transaction count.
     - `bridge_usage_update`: Provides updates for bridge usage counts.
 
 **Example WebSocket Integration:**
@@ -179,9 +179,9 @@ socket.on("token_volume_update", ({ token, totalVolume }) => {
   console.log(`Token: ${token}, Volume: ${totalVolume}`);
 });
 
-// Listen for chain volume updates
-socket.on("chain_volume_update", ({ chainId, totalVolume }) => {
-  console.log(`Chain: ${chainId}, Volume: ${totalVolume}`);
+// Listen for chain transaction count updates
+socket.on("transactions_per_chain_update", ({ chainId, txCount }) => {
+  console.log(`Chain: ${chainId}, Volume: ${txCount}`);
 });
 
 // Listen for bridge usage updates

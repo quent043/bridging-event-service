@@ -51,7 +51,7 @@ export class MetricsGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         break;
 
       case 'chain_update':
-        this.server.emit('chain_volume_update', {
+        this.server.emit('transactions_per_chain_update', {
           chainId: update.chainId,
           totalVolume: update.totalVolume,
         });

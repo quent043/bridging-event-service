@@ -18,7 +18,7 @@ export class MetricsService {
     this.logger.log('Processing event...');
 
     let updatedTokenVolume = '';
-    let updatedChainVolume = '';
+    let updatedChainTransactionCount = '';
     let updatedBridgeUseCount = '';
 
     try {
@@ -26,14 +26,14 @@ export class MetricsService {
       const redisResult = await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
       updatedTokenVolume = redisResult.updatedTokenVolume;
-      updatedChainVolume = redisResult.updatedChainVolume;
+      updatedChainTransactionCount = redisResult.updatedChainTxCount;
       updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
 
       // Step 2: Persist to Database
       await this.persistToDatabase(
         eventData,
         updatedTokenVolume,
-        updatedChainVolume,
+        updatedChainTransactionCount,
         updatedBridgeUseCount,
       );
 
@@ -47,7 +47,7 @@ export class MetricsService {
   private async persistToDatabase(
     eventData: SocketBridgeEventLog,
     updatedTokenVolume: string,
-    updatedChainVolume: string,
+    updatedChainTsCount: string,
     bridgeUseCount: string,
   ) {
     try {
@@ -61,8 +61,8 @@ export class MetricsService {
         {
           type: BridgeDataType.CHAIN_VOLUME,
           referenceId: eventData.args.toChainId.toString(),
-          totalVolume: updatedChainVolume.toString(),
-          volumeChange: eventData.args.amount,
+          totalVolume: updatedChainTsCount.toString(),
+          volumeChange: 1n,
         },
         {
           type: BridgeDataType.BRIDGE_USE_COUNT,
@@ -89,15 +89,18 @@ export class MetricsService {
     }
   }
 
-  async getTotalVolumeByChain(): Promise<Record<string, number>> {
+  async getTotalTransactionCountByChain(): Promise<Record<string, number>> {
     try {
-      const chainVolumes = await this.redisClient.hGetAll('bridge_events:volume_by_chain');
+      const chainVolumes = await this.redisClient.hGetAll('bridge_events:transactions_per_chain');
       return Object.fromEntries(
         Object.entries(chainVolumes).map(([chain, volume]) => [chain, Number(volume)]),
       );
     } catch (error: any) {
-      this.logger.error('Failed to retrieve total volume by chain', error.stack || error);
-      throw new Error(`MetricsService.getTotalVolumeByChain failed: ${error.message}`);
+      this.logger.error(
+        'Failed to retrieve total transaction count by chain',
+        error.stack || error,
+      );
+      throw new Error(`MetricsService.getTotalTransactionCountByChain failed: ${error.message}`);
     }
   }
 

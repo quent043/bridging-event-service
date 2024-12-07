@@ -7,7 +7,7 @@ import BigNumber from 'bignumber.js';
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly client;
   readonly tokenVolumeKey = 'bridge_events:total_volume';
-  readonly chainVolumeKey = 'bridge_events:volume_by_chain';
+  readonly chainTxCountKey = 'bridge_events:transactions_per_chain';
   readonly bridgeUsageKey = 'bridge_events:bridge_usage';
   private logger: Logger = new Logger('RedisService');
 
@@ -51,14 +51,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Initialized ${this.tokenVolumeKey} with default value 0.`);
       }
 
-      // Initialize chain volume key
-      const chainVolumeExists = await this.client.exists(this.chainVolumeKey);
+      // Initialize chain tx count key
+      const chainVolumeExists = await this.client.exists(this.chainTxCountKey);
       if (!chainVolumeExists) {
         /**
          * @dev: Set a default value for a chain Id to 0 to avoid null values
          */
-        await this.client.hSet(this.chainVolumeKey, '8453', '0');
-        this.logger.log(`Initialized ${this.chainVolumeKey} with default value 0.`);
+        await this.client.hSet(this.chainTxCountKey, '8453', '0');
+        this.logger.log(`Initialized ${this.chainTxCountKey} with default value 0.`);
       }
     } catch (error: any) {
       this.logger.error('Error initializing Redis keys', error.stack || error);
@@ -117,7 +117,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async batchBridgeEventsRedisUpdate(eventData: SocketBridgeEventLog): Promise<{
     updatedTokenVolume: string;
-    updatedChainVolume: string;
+    updatedChainTxCount: string;
     updatedBridgeUseCount: string;
   }> {
     const pipeline = this.client.multi();
@@ -130,29 +130,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
 
     try {
-      // Fetch current token volumes
+      // Fetch current token volume
       pipeline.hGet(this.tokenVolumeKey, tokenField);
-      pipeline.hGet(this.chainVolumeKey, chainField);
 
-      // Increment bridge usage
+      // Increment bridge usage & transaction count
       pipeline.hIncrBy(this.bridgeUsageKey, eventData.args.bridgeName, 1);
+      pipeline.hIncrBy(this.chainTxCountKey, eventData.args.toChainId.toString(), 1);
 
-      const [currentTokenVolume, currentChainVolume, bridgeUsageCount] = await pipeline.exec();
+      const [currentTokenVolume, chainTxCount, bridgeUsageCount] = await pipeline.exec();
 
       const updatedTokenVolume = this.incrementBigNumber(
         currentTokenVolume as string,
         normalizedAmount,
       );
-      const updatedChainVolume = this.incrementBigNumber(
-        currentChainVolume as string,
-        normalizedAmount,
-      );
+
+      const updatedChainTxCount = chainTxCount as string;
       const updatedBridgeUseCount = bridgeUsageCount as string;
 
       // Update volumes and publish events
       const updatePipeline = this.client.multi();
       updatePipeline.hSet(this.tokenVolumeKey, tokenField, updatedTokenVolume);
-      updatePipeline.hSet(this.chainVolumeKey, chainField, updatedChainVolume);
       updatePipeline.publish(
         'bridge_events:processed_updates',
         JSON.stringify({
@@ -166,7 +163,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         JSON.stringify({
           type: 'chain_update',
           chainId: chainField,
-          totalVolume: updatedChainVolume,
+          totalVolume: chainTxCount,
         }),
       );
       updatePipeline.publish(
@@ -184,7 +181,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       return {
         updatedTokenVolume,
-        updatedChainVolume,
+        updatedChainTxCount,
         updatedBridgeUseCount,
       };
     } catch (error: any) {
