@@ -11,6 +11,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   readonly bridgeUsageKey = 'bridge_events:bridge_usage';
   private logger: Logger = new Logger('RedisService');
 
+  private readonly tokenDecimalsMapping: Record<string, number> = {
+    '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE': 18, // Ether
+    '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': 6, // USDC
+    '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': 18, // WETH
+    '0xdAC17F958D2ee523a2206206994597C13D831ec7': 6, // USDT
+    '0x467Bccd9d29f223BcE8043b84E8C8B282827790F': 18, // Multichain Token
+    '0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0': 18, // MATIC
+    '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984': 18, // UNI
+    '0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F': 18, // SNX
+    '0x55296f69f40Ea6d20E478533C15A6B08B654E758': 18, // ZRX
+  };
+
   constructor() {
     this.client = createClient({
       url: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -99,6 +111,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return updated.toString();
   }
 
+  normalizeAmount(amount: string, decimals: number): BigNumber {
+    return new BigNumber(amount).dividedBy(new BigNumber(10).pow(decimals));
+  }
+
   async batchBridgeEventsRedisUpdate(eventData: SocketBridgeEventLog): Promise<{
     updatedTokenVolume: string;
     updatedChainVolume: string;
@@ -109,6 +125,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const tokenField = eventData.args.token;
     const chainField = eventData.args.toChainId.toString();
     const amount = eventData.args.amount.toString();
+    const decimals = this.tokenDecimalsMapping[tokenField] || 18;
+
+    const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
 
     try {
       // Fetch current token volumes
@@ -120,8 +139,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       const [currentTokenVolume, currentChainVolume, bridgeUsageCount] = await pipeline.exec();
 
-      const updatedTokenVolume = this.incrementBigNumber(currentTokenVolume as string, amount);
-      const updatedChainVolume = this.incrementBigNumber(currentChainVolume as string, amount);
+      const updatedTokenVolume = this.incrementBigNumber(
+        currentTokenVolume as string,
+        normalizedAmount,
+      );
+      const updatedChainVolume = this.incrementBigNumber(
+        currentChainVolume as string,
+        normalizedAmount,
+      );
       const updatedBridgeUseCount = bridgeUsageCount as string;
 
       // Update volumes and publish events
