@@ -21,6 +21,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984': 18, // UNI
     '0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F': 18, // SNX
     '0x55296f69f40Ea6d20E478533C15A6B08B654E758': 18, // ZRX
+    '0xaaeE1A9723aaDB7afA2810263653A34bA2C21C7a': 18, // Mog Coin
   };
 
   constructor() {
