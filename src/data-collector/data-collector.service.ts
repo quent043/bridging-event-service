@@ -5,7 +5,7 @@ import { MetricsService } from '../metrics/metrics.service';
 import { SocketBridgeEventLog } from '../../types';
 
 @Injectable()
-export class BridgeEventListenerService implements OnModuleInit {
+export class DataCollectorService implements OnModuleInit {
   private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
   private readonly abi = SocketGatewayABI;
 
