@@ -11,6 +11,7 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
   });
+  console.log('CORS enabled', process.env.FRONTEND_URL);
 
   await app.listen(3000);
 }
