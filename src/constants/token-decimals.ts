@@ -11,4 +11,5 @@ export const tokenDecimalsMapping: Record<string, number> = {
   '0xaaeE1A9723aaDB7afA2810263653A34bA2C21C7a': 18, // Mog Coin
   '0x8f693ca8D21b157107184d29D398A8D082b38b76': 18, // OctoFi
   '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599': 8, // WBTC
+  '0xed328E9C1179a30ddC1E7595E036AEd8760C22aF': 18, // MCADE
 };
