@@ -1,20 +1,30 @@
+<div align="center">
 
-# Bridging Event Service
+# 🌉 Bridging Event Service 🌉
+
+### Real-Time Monitoring of Bridged Tokens
 
 The **Bridging Event Service** is a backend system designed for real-time monitoring of bridged tokens. It collects, processes, and serves live updates on token bridging events using WebSocket and RESTful APIs. It also stores historical data for analytics and reporting.
 
+🌐 **Hosted Version**:  
+Explore the live version of the service [here](https://sockettech.vercel.app/).
+
 ---
 
-## 💻 Tech Stack
+## Technologies Used
 
-The service leverages the following technologies:
+<p align="center" style="display: flex; justify-content: center; gap: 20px;">
+  <img src="https://nestjs.com/img/logo-small.svg" alt="NestJS" width="50" height="50" style="margin: 0 10px;">
+  <img src="./assets/prisma_logo_icon_248778.svg" alt="Prisma" width="50" height="50" style="margin: 0 10px;">
+  <img src="https://cdn.worldvectorlogo.com/logos/redis.svg" alt="Redis" width="50" height="50" style="margin: 0 10px;">
+  <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" width="50" height="50" style="margin: 0 10px;">
+  <img src="https://socket.io/images/logo.svg" alt="Socket.IO" width="50" height="50" style="margin: 0 10px;">
+  <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" width="50" height="50" style="margin: 0 10px;">
+  <img src="https://cdn.worldvectorlogo.com/logos/nodejs-icon.svg" alt="Node.js" width="50" height="50" style="margin: 0 10px;">
+</p>
 
-- **[NestJS](https://nestjs.com/):** Framework for building efficient, scalable server-side applications.
-- **[Prisma](https://www.prisma.io/):** ORM for interacting with a PostgreSQL database.
-- **[Redis](https://redis.io/):** High-performance in-memory datastore for caching and live updates.
-- **[PostgreSQL](https://www.postgresql.org/):** Relational database for persistent storage.
-- **[Socket.IO](https://socket.io/):** Enables real-time, bi-directional communication.
-- **[Docker](https://www.docker.com/):** Simplifies containerization and deployment.
+</div>
+
 
 ---
 
