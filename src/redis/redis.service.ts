@@ -191,6 +191,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     );
 
     await pipeline.exec();
+
+    this.logger.log('Redis events published');
   }
 
   private async addEventToDatabaseQueue(
@@ -201,6 +203,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     updatedChainTxCount: string,
     updatedBridgeUseCount: string,
   ) {
+    this.logger.log('Initiating database update...');
+
     const formatedEventData = this.formatBigInt(eventData);
 
     await this.eventQueue.add('save-event', {
@@ -226,6 +230,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         },
       ],
     });
+
+    this.logger.log('Update added to database queue');
   }
 
   private incrementBigNumber(currentValue: string | null, increment: string): string {
