@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { createClient } from 'redis';
 import { SocketBridgeEventLog } from '../../types';
-import { tokenDecimalsMapping } from '../constants/token-decimals';
 import BigNumber from 'bignumber.js';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -69,15 +68,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client;
   }
 
-  async publish(channel: string, message: string): Promise<void> {
-    try {
-      await this.client.publish(channel, message);
-    } catch (error: any) {
-      this.logger.error(`Failed to publish to channel ${channel}`, error.stack || error);
-      throw new Error(`RedisService.publish failed: ${error.message}`);
-    }
-  }
-
   async subscribe(channel: string, callback: (message: string) => void): Promise<void> {
     try {
       const subscriber = this.client.duplicate();
@@ -91,23 +81,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  incrementBigNumber(currentValue: string | null, increment: string): string {
-    const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
-    const updated = current.plus(increment);
-    return updated.toString();
-  }
-
-  decrementBigNumber(currentValue: string | null, decrement: string): string {
-    const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
-    const updated = current.minus(decrement);
-    return updated.toString();
-  }
-
-  normalizeAmount(amount: string, decimals: number): BigNumber {
-    return new BigNumber(amount).dividedBy(new BigNumber(10).pow(decimals));
-  }
-
-  async batchBridgeEventsRedisUpdate(eventData: SocketBridgeEventLog): Promise<{
+  async batchBridgeEventsRedisUpdate(
+    eventData: SocketBridgeEventLog,
+    normalizedAmount: string,
+  ): Promise<{
     updatedTokenVolume: string;
     updatedChainTxCount: string;
     updatedBridgeUseCount: string;
@@ -115,10 +92,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       const tokenField = eventData.args.token;
       const chainField = eventData.args.toChainId.toString();
-      const amount = eventData.args.amount.toString();
-      const decimals = tokenDecimalsMapping[tokenField] || 18;
-
-      const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
 
       // Fetch and update Redis data
       const { currentTokenVolume, chainTxCount, bridgeUsageCount } =
@@ -253,6 +226,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         },
       ],
     });
+  }
+
+  private incrementBigNumber(currentValue: string | null, increment: string): string {
+    const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
+    const updated = current.plus(increment);
+    return updated.toString();
   }
 
   private formatBigInt(obj: any): any {

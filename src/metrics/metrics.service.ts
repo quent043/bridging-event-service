@@ -1,25 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { SocketBridgeEventLog } from '../../types';
-import { BridgeDataType } from '@prisma/client';
+import BigNumber from 'bignumber.js';
+import { tokenDecimalsMapping } from '../constants/token-decimals';
 
 @Injectable()
 export class MetricsService {
   private redisClient = this.redisService.getClient();
   private readonly logger = new Logger('MetricsService');
 
-  constructor(
-    private readonly redisService: RedisService,
-    private readonly prismaService: PrismaService,
-  ) {}
+  constructor(private readonly redisService: RedisService) {}
+
+  private normalizeAmount(amount: string, decimals: number): BigNumber {
+    return new BigNumber(amount).dividedBy(new BigNumber(10).pow(decimals));
+  }
 
   async processBridgeEvent(eventData: SocketBridgeEventLog) {
     this.logger.log('Processing event...');
 
     try {
-      //TODO: Move processing here
-      await this.redisService.batchBridgeEventsRedisUpdate(eventData);
+      const amount = eventData.args.amount.toString();
+      const decimals = tokenDecimalsMapping[eventData.args.token] || 18;
+      const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
+
+      await this.redisService.batchBridgeEventsRedisUpdate(eventData, normalizedAmount);
 
       this.logger.log('Event processed successfully');
     } catch (error: any) {
