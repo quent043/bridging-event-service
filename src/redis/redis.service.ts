@@ -112,88 +112,48 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     updatedChainTxCount: string;
     updatedBridgeUseCount: string;
   }> {
-    const pipeline = this.client.multi();
-
-    const tokenField = eventData.args.token;
-    const chainField = eventData.args.toChainId.toString();
-    const amount = eventData.args.amount.toString();
-    const decimals = tokenDecimalsMapping[tokenField] || 18;
-
-    const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
-
     try {
-      // Fetch current token volume & Tx Count
-      pipeline.hGet(this.tokenVolumeKey, tokenField);
-      // Increment bridge usage & transaction count
-      pipeline.hIncrBy(this.chainTxCountKey, eventData.args.toChainId.toString(), 1);
-      pipeline.hIncrBy(this.bridgeUsageKey, eventData.args.bridgeName, 1);
+      const tokenField = eventData.args.token;
+      const chainField = eventData.args.toChainId.toString();
+      const amount = eventData.args.amount.toString();
+      const decimals = tokenDecimalsMapping[tokenField] || 18;
 
-      const [currentTokenVolume, chainTxCount, bridgeUsageCount] = await pipeline.exec();
+      const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
+
+      // Fetch and update Redis data
+      const { currentTokenVolume, chainTxCount, bridgeUsageCount } =
+        await this.fetchCurrentRedisData(
+          tokenField,
+          eventData.args.toChainId.toString(),
+          eventData.args.bridgeName,
+        );
 
       const updatedTokenVolume = this.incrementBigNumber(
         currentTokenVolume as string,
         normalizedAmount,
       );
-
       const updatedChainTxCount = chainTxCount as string;
       const updatedBridgeUseCount = bridgeUsageCount as string;
 
-      // Update volumes and publish events
-      const updatePipeline = this.client.multi();
-      updatePipeline.hSet(this.tokenVolumeKey, tokenField, updatedTokenVolume);
-      updatePipeline.publish(
-        'bridge_events:processed_updates',
-        JSON.stringify({
-          type: 'token_update',
-          token: tokenField,
-          totalVolume: updatedTokenVolume,
-        }),
-      );
-      updatePipeline.publish(
-        'bridge_events:processed_updates',
-        JSON.stringify({
-          type: 'chain_update',
-          chainId: chainField,
-          totalVolume: chainTxCount,
-        }),
-      );
-      updatePipeline.publish(
-        'bridge_events:processed_updates',
-        JSON.stringify({
-          type: 'bridge_usage_update',
-          bridge: eventData.args.bridgeName,
-          usageCount: bridgeUsageCount,
-        }),
+      // Update Redis and publish events
+      await this.updateRedisTokenVolumeAndPublish(
+        tokenField,
+        updatedTokenVolume,
+        chainField,
+        updatedChainTxCount,
+        eventData.args.bridgeName,
+        updatedBridgeUseCount,
       );
 
-      await updatePipeline.exec();
-
-      const formatedEventData = this.formatBigInt(eventData);
-
-      // Add a job to the queue for DB persistence
-      await this.eventQueue.add('save-event', {
-        formatedEventData,
-        updates: [
-          {
-            type: BridgeDataType.TOKEN_VOLUME,
-            referenceId: tokenField,
-            totalVolume: updatedTokenVolume,
-            volumeChange: eventData.args.amount.toString(),
-          },
-          {
-            type: BridgeDataType.CHAIN_VOLUME,
-            referenceId: chainField,
-            totalVolume: updatedChainTxCount,
-            volumeChange: 1,
-          },
-          {
-            type: BridgeDataType.BRIDGE_USE_COUNT,
-            referenceId: eventData.args.bridgeName,
-            totalVolume: updatedBridgeUseCount,
-            volumeChange: 1,
-          },
-        ],
-      });
+      // Format event data and add a job to the queue
+      await this.addEventToDatabaseQueue(
+        eventData,
+        tokenField,
+        chainField,
+        updatedTokenVolume,
+        updatedChainTxCount,
+        updatedBridgeUseCount,
+      );
 
       this.logger.log('Batch Redis updates executed successfully');
 
@@ -206,6 +166,93 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to execute batch Redis updates', error.stack || error);
       throw new Error(`RedisService.batchBridgeEventsRedisUpdate failed: ${error.message}`);
     }
+  }
+
+  private async fetchCurrentRedisData(tokenField: string, chainField: string, bridgeName: string) {
+    const pipeline = this.client.multi();
+
+    pipeline.hGet(this.tokenVolumeKey, tokenField);
+    pipeline.hIncrBy(this.chainTxCountKey, chainField, 1);
+    pipeline.hIncrBy(this.bridgeUsageKey, bridgeName, 1);
+
+    const [currentTokenVolume, chainTxCount, bridgeUsageCount] = await pipeline.exec();
+
+    return { currentTokenVolume, chainTxCount, bridgeUsageCount };
+  }
+
+  private async updateRedisTokenVolumeAndPublish(
+    tokenField: string,
+    updatedTokenVolume: string,
+    chainField: string,
+    updatedChainTxCount: string,
+    bridgeName: string,
+    updatedBridgeUseCount: string,
+  ) {
+    const pipeline = this.client.multi();
+
+    pipeline.hSet(this.tokenVolumeKey, tokenField, updatedTokenVolume);
+
+    pipeline.publish(
+      'bridge_events:processed_updates',
+      JSON.stringify({
+        type: 'token_update',
+        token: tokenField,
+        totalVolume: updatedTokenVolume,
+      }),
+    );
+    pipeline.publish(
+      'bridge_events:processed_updates',
+      JSON.stringify({
+        type: 'chain_update',
+        chainId: chainField,
+        totalVolume: updatedChainTxCount,
+      }),
+    );
+    pipeline.publish(
+      'bridge_events:processed_updates',
+      JSON.stringify({
+        type: 'bridge_usage_update',
+        bridge: bridgeName,
+        usageCount: updatedBridgeUseCount,
+      }),
+    );
+
+    await pipeline.exec();
+  }
+
+  private async addEventToDatabaseQueue(
+    eventData: SocketBridgeEventLog,
+    tokenField: string,
+    chainField: string,
+    updatedTokenVolume: string,
+    updatedChainTxCount: string,
+    updatedBridgeUseCount: string,
+  ) {
+    const formatedEventData = this.formatBigInt(eventData);
+
+    await this.eventQueue.add('save-event', {
+      formatedEventData,
+      updates: [
+        {
+          type: BridgeDataType.TOKEN_VOLUME,
+          referenceId: tokenField,
+          totalVolume: updatedTokenVolume,
+          volumeChange: eventData.args.amount.toString(),
+        },
+        {
+          type: BridgeDataType.CHAIN_VOLUME,
+          referenceId: chainField,
+          totalVolume: updatedChainTxCount,
+          volumeChange: 1,
+        },
+        {
+          type: BridgeDataType.BRIDGE_USE_COUNT,
+          referenceId: eventData.args.bridgeName,
+          totalVolume: updatedBridgeUseCount,
+          volumeChange: 1,
+        },
+      ],
+    });
   }
 
   private formatBigInt(obj: any): any {
