@@ -30,7 +30,7 @@ Explore the live version of the service [here](https://sockettech.vercel.app/).
 ## 📊 Architecture Overview
 
 <p align="center">
-  <img src="./assets/technical_drawing.png" alt="Technical Drawing" width="1000">
+  <img src="./assets/technical_drawing.PNG" alt="Technical Drawing" width="1000">
 </p>
 
 The application operates as follows:
