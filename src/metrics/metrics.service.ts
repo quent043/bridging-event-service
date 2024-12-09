@@ -18,45 +18,13 @@ export class MetricsService {
     this.logger.log('Processing event...');
 
     try {
+      //TODO: Mode processing here
       await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
       this.logger.log('Event processed successfully');
     } catch (error: any) {
       this.logger.error('Failed to process bridge event', error.stack);
       throw new Error('Failed to process bridge event with consistency');
-    }
-  }
-
-  private async persistToDatabase(
-    eventData: SocketBridgeEventLog,
-    updatedTokenVolume: string,
-    updatedChainTsCount: string,
-    bridgeUseCount: string,
-  ) {
-    try {
-      await this.prismaService.saveProcessedBridgeEventDataBatch(eventData, [
-        {
-          type: BridgeDataType.TOKEN_VOLUME,
-          referenceId: eventData.args.token,
-          totalVolume: updatedTokenVolume.toString(),
-          volumeChange: eventData.args.amount,
-        },
-        {
-          type: BridgeDataType.CHAIN_VOLUME,
-          referenceId: eventData.args.toChainId.toString(),
-          totalVolume: updatedChainTsCount.toString(),
-          volumeChange: 1n,
-        },
-        {
-          type: BridgeDataType.BRIDGE_USE_COUNT,
-          referenceId: eventData.args.bridgeName,
-          totalVolume: bridgeUseCount.toString(),
-          volumeChange: 1n,
-        },
-      ]);
-    } catch (error: any) {
-      this.logger.error('Failed to persist data to the database', error.stack);
-      throw error;
     }
   }
 
