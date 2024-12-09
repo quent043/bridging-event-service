@@ -29,15 +29,15 @@ export class MetricsService {
       updatedChainTransactionCount = redisResult.updatedChainTxCount;
       updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
 
-      // Step 2: Persist to Database
-      await this.persistToDatabase(
-        eventData,
-        updatedTokenVolume,
-        updatedChainTransactionCount,
-        updatedBridgeUseCount,
-      );
-
-      this.logger.log('Event processed successfully');
+      // // Step 2: Persist to Database
+      // await this.persistToDatabase(
+      //   eventData,
+      //   updatedTokenVolume,
+      //   updatedChainTransactionCount,
+      //   updatedBridgeUseCount,
+      // );
+      //
+      // this.logger.log('Event processed successfully');
     } catch (error: any) {
       this.logger.error('Failed to process bridge event', error.stack);
       throw new Error('Failed to process bridge event with consistency');
