@@ -18,7 +18,7 @@ export class MetricsService {
     this.logger.log('Processing event...');
 
     try {
-      //TODO: Mode processing here
+      //TODO: Move processing here
       await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
       this.logger.log('Event processed successfully');
