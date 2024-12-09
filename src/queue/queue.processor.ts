@@ -8,11 +8,17 @@ export class QueueProcessor {
   constructor(private readonly prismaService: PrismaService) {}
 
   @Process('save-event')
-  async handleSaveEvent(job: Job<{ eventData: SocketBridgeEventLog; updates: any }>) {
-    const { eventData, updates } = job.data;
+  async handleSaveEvent(job: Job<{ formatedEventData: SocketBridgeEventLog; updates: any }>) {
+    const { formatedEventData, updates } = job.data;
 
-    // Save raw and processed event to DB
-    await this.prismaService.saveProcessedBridgeEventDataBatch(eventData, updates);
-    console.log('Event data persisted successfully');
+    try {
+      // Save raw and processed event to DB
+      await this.prismaService.saveProcessedBridgeEventDataBatch(formatedEventData, updates);
+
+      console.log('Event data persisted successfully');
+    } catch (error) {
+      console.error('Failed to process save-event job:', error);
+      throw error;
+    }
   }
 }

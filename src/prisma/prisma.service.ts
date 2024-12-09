@@ -66,7 +66,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         data: {
           type: update.type,
           referenceId: update.referenceId,
-          totalVolume: update.totalVolume,
+          totalVolume: update.totalVolume.toString(),
           volumeChange: update.volumeChange.toString(),
         },
       }),

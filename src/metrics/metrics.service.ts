@@ -17,28 +17,10 @@ export class MetricsService {
   async processBridgeEvent(eventData: SocketBridgeEventLog) {
     this.logger.log('Processing event...');
 
-    let updatedTokenVolume = '';
-    let updatedChainTransactionCount = '';
-    let updatedBridgeUseCount = '';
-
     try {
-      // Step 1: Update Redis
-      const redisResult = await this.redisService.batchBridgeEventsRedisUpdate(eventData);
+      await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
-      //TODO a delete
-      // updatedTokenVolume = redisResult.updatedTokenVolume;
-      // updatedChainTransactionCount = redisResult.updatedChainTxCount;
-      // updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
-      //
-      // // Step 2: Persist to Database
-      // await this.persistToDatabase(
-      //   eventData,
-      //   updatedTokenVolume,
-      //   updatedChainTransactionCount,
-      //   updatedBridgeUseCount,
-      // );
-      //
-      // this.logger.log('Event processed successfully');
+      this.logger.log('Event processed successfully');
     } catch (error: any) {
       this.logger.error('Failed to process bridge event', error.stack);
       throw new Error('Failed to process bridge event with consistency');
