@@ -25,6 +25,21 @@ Explore the live version of the service [here](https://sockettech.vercel.app/).
 
 </div>
 
+---
+
+## 📊 Architecture Overview
+
+<p align="center">
+  <img src="./assets/technical_drawing.png" alt="Technical Drawing" width="1000">
+</p>
+
+The application operates as follows:
+
+1. **Data Collection:** The system listens for real-time events emitted from the SocketGateway smart contract.
+2. **Data processing:** Captured events are processed and dispatched to the Redis module for efficient handling.
+3. **Data Publishing and Persistence:** Data is temporarily stored in Redis for fast in-memory access and live updates. A Bull Queue worker processes the Redis-stored data to ensure consistency and persistence in a PostgreSQL database.
+4. **API Layer:** The processed data is exposed via RESTful API endpoints for historical and live analytics.
+5. **WebSocket Streams:** Real-time updates are sent to connected clients for visualization on a live dashboard.
 
 ---
 
@@ -127,43 +142,43 @@ The backend server will be running at `http://localhost:3000`.
 ### REST Endpoints
 
 1. **GET `/metrics/total_volume`**
-    - **Description:** Retrieves the total volume of all bridged tokens.
-    - **Example Response:**
-      ```json
-      {
-        "message": "Total volume retrieved successfully",
-        "data": {
-          "0xTokenAddress1": 123456789.01,
-          "0xTokenAddress2": 987654321.99
-        }
-      }
-      ```
+   - **Description:** Retrieves the total volume of all bridged tokens.
+   - **Example Response:**
+     ```json
+     {
+       "message": "Total volume retrieved successfully",
+       "data": {
+         "0xTokenAddress1": 123456789.01,
+         "0xTokenAddress2": 987654321.99
+       }
+     }
+     ```
 
 2. **GET `/metrics/total_transactions_by_chain`**
-    - **Description:** Retrieves the total count of transactions of tokens bridged per chain.
-    - **Example Response:**
-      ```json
-      {
-        "message": "Total transactions count by chain retrieved successfully",
-        "data": {
-          "1": 1234,
-          "137": 987654
-        }
-      }
-      ```
+   - **Description:** Retrieves the total count of transactions of tokens bridged per chain.
+   - **Example Response:**
+     ```json
+     {
+       "message": "Total transactions count by chain retrieved successfully",
+       "data": {
+         "1": 1234,
+         "137": 987654
+       }
+     }
+     ```
 
 3. **GET `/metrics/bridge_usage`**
-    - **Description:** Retrieves the usage count for each bridge.
-    - **Example Response:**
-      ```json
-      {
-        "message": "Bridge usage counts retrieved successfully",
-        "data": {
-          "BridgeName1": 150,
-          "BridgeName2": 75
-        }
-      }
-      ```
+   - **Description:** Retrieves the usage count for each bridge.
+   - **Example Response:**
+     ```json
+     {
+       "message": "Bridge usage counts retrieved successfully",
+       "data": {
+         "BridgeName1": 150,
+         "BridgeName2": 75
+       }
+     }
+     ```
 
 ---
 
@@ -173,9 +188,9 @@ The WebSocket streams live updates for token and chain volumes, as well as bridg
 
 - **Connection URL:** `ws://localhost:3000`
 - **Events:**
-    - `token_volume_update`: Provides updates for token volumes.
-    - `transactions_per_chain_update`: Provides updates for chain transaction count.
-    - `bridge_usage_update`: Provides updates for bridge usage counts.
+   - `token_volume_update`: Provides updates for token volumes.
+   - `transactions_per_chain_update`: Provides updates for chain transaction count.
+   - `bridge_usage_update`: Provides updates for bridge usage counts.
 
 **Example WebSocket Integration:**
 
@@ -228,6 +243,7 @@ A live frontend dashboard for the Bridging Event Service is available here:
 
 The dashboard will be available at `http://localhost:3001`.
 
+---
 
 ## ⚠️ Troubleshooting: Authentication Failed Against Database Server
 
@@ -240,5 +256,3 @@ Authentication failed against database server at `localhost`, the provided datab
 When running the Docker deployment, this error could occur if a local PostgreSQL instance is running on your system and conflicting with the PostgreSQL instance running inside Docker. When Prisma or your application tries to connect, it may inadvertently connect to the local PostgreSQL instead of the containerized one.
 
 **Solution: Stop the Local PostgreSQL Instance**
-
-
