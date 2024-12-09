@@ -5,11 +5,12 @@ import { MetricsService } from '../metrics/metrics.service';
 import { SocketBridgeEventLog } from '../../types';
 
 @Injectable()
-export class BridgeEventListenerService implements OnModuleInit {
+export class DataCollectorService implements OnModuleInit {
   private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
   private readonly abi = SocketGatewayABI;
 
   private logger: Logger = new Logger('BridgeEventListenerService');
+  private maxRetries = 5;
 
   constructor(
     @Inject('PUBLIC_CLIENT') private publicClient: PublicClient,
@@ -18,9 +19,10 @@ export class BridgeEventListenerService implements OnModuleInit {
 
   async onModuleInit() {
     this.logger.log('Initializing event listener...');
-    this.listenToEvents();
+    await this.listenToEventsWithRetry();
   }
 
+  //TODO handle the watchcontract fail event
   private async listenToEvents() {
     const eventName = 'SocketBridge';
 
@@ -29,7 +31,7 @@ export class BridgeEventListenerService implements OnModuleInit {
       abi: this.abi,
       eventName,
       onLogs: async (logs: Log[]) => {
-        this.logger.log('Number of events received:', logs.length);
+        this.logger.log(`Number of events received: ${logs.length}`);
 
         try {
           await Promise.all(
@@ -50,5 +52,41 @@ export class BridgeEventListenerService implements OnModuleInit {
         }
       },
     });
+  }
+
+  private async listenToEventsWithRetry() {
+    let attempt = 0;
+
+    while (attempt < this.maxRetries) {
+      try {
+        this.logger.log(`Attempt ${attempt + 1}: Starting event listener...`);
+        await this.listenToEvents();
+        this.logger.log('Event listener started successfully');
+        break;
+      } catch (error) {
+        attempt++;
+        const delay = this.getExponentialBackoffDelay(attempt);
+        this.logger.error(
+          `Attempt ${attempt} failed. Retrying in ${delay / 1000} seconds...`,
+          error,
+        );
+        if (attempt < this.maxRetries) {
+          await this.sleep(delay);
+        } else {
+          this.logger.error('Max retries reached. Event listener failed to start.');
+          throw new Error('Event listener initialization failed after maximum retries.');
+        }
+      }
+    }
+  }
+
+  private getExponentialBackoffDelay(attempt: number): number {
+    const baseDelay = 1000;
+    const maxDelay = 30000;
+    return Math.min(baseDelay * 2 ** attempt, maxDelay);
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

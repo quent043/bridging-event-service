@@ -3,6 +3,9 @@ import { createClient } from 'redis';
 import { SocketBridgeEventLog } from '../../types';
 import { tokenDecimalsMapping } from '../constants/token-decimals';
 import BigNumber from 'bignumber.js';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { BridgeDataType } from '@prisma/client';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -12,7 +15,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   readonly bridgeUsageKey = 'bridge_events:bridge_usage';
   private logger: Logger = new Logger('RedisService');
 
-  constructor() {
+  constructor(@InjectQueue('event-queue') private readonly eventQueue: Queue) {
     this.client = createClient({
       url: process.env.REDIS_URL || 'redis://localhost:6379',
     });
@@ -165,6 +168,33 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       await updatePipeline.exec();
 
+      const formatedEventData = this.formatBigInt(eventData);
+
+      // Add a job to the queue for DB persistence
+      await this.eventQueue.add('save-event', {
+        formatedEventData,
+        updates: [
+          {
+            type: BridgeDataType.TOKEN_VOLUME,
+            referenceId: tokenField,
+            totalVolume: updatedTokenVolume,
+            volumeChange: eventData.args.amount.toString(),
+          },
+          {
+            type: BridgeDataType.CHAIN_VOLUME,
+            referenceId: chainField,
+            totalVolume: updatedChainTxCount,
+            volumeChange: 1,
+          },
+          {
+            type: BridgeDataType.BRIDGE_USE_COUNT,
+            referenceId: eventData.args.bridgeName,
+            totalVolume: updatedBridgeUseCount,
+            volumeChange: 1,
+          },
+        ],
+      });
+
       this.logger.log('Batch Redis updates executed successfully');
 
       return {
@@ -176,5 +206,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to execute batch Redis updates', error.stack || error);
       throw new Error(`RedisService.batchBridgeEventsRedisUpdate failed: ${error.message}`);
     }
+  }
+
+  private formatBigInt(obj: any): any {
+    if (typeof obj === 'bigint') {
+      return obj.toString();
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(this.formatBigInt);
+    }
+    if (obj !== null && typeof obj === 'object') {
+      return Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [key, this.formatBigInt(value)]),
+      );
+    }
+    return obj;
   }
 }
