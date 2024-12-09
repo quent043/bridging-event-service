@@ -15,10 +15,10 @@ Explore the live version of the service [here](https://sockettech.vercel.app/).
 
 <p align="center" style="display: flex; justify-content: center; gap: 20px;">
   <img src="https://nestjs.com/img/logo-small.svg" alt="NestJS" width="50" height="50" style="margin: 0 10px;">
-  <img src="./assets/prisma_logo_icon_248778.svg" alt="Prisma" width="50" height="50" style="margin: 0 10px;">
+  <img src="./assets/prisma-svgrepo-com.svg" alt="Prisma" width="50" height="50" style="margin: 0 10px;">
   <img src="https://cdn.worldvectorlogo.com/logos/redis.svg" alt="Redis" width="50" height="50" style="margin: 0 10px;">
   <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" width="50" height="50" style="margin: 0 10px;">
-  <img src="https://socket.io/images/logo.svg" alt="Socket.IO" width="50" height="50" style="margin: 0 10px;">
+  <img src="./assets/socket-io.svg" alt="Socket.IO" width="50" height="50" style="margin: 0 10px;">
   <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" width="50" height="50" style="margin: 0 10px;">
   <img src="https://cdn.worldvectorlogo.com/logos/nodejs-icon.svg" alt="Node.js" width="50" height="50" style="margin: 0 10px;">
 </p>
