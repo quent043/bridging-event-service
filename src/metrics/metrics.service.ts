@@ -25,10 +25,11 @@ export class MetricsService {
       // Step 1: Update Redis
       const redisResult = await this.redisService.batchBridgeEventsRedisUpdate(eventData);
 
-      updatedTokenVolume = redisResult.updatedTokenVolume;
-      updatedChainTransactionCount = redisResult.updatedChainTxCount;
-      updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
-
+      //TODO a delete
+      // updatedTokenVolume = redisResult.updatedTokenVolume;
+      // updatedChainTransactionCount = redisResult.updatedChainTxCount;
+      // updatedBridgeUseCount = redisResult.updatedBridgeUseCount;
+      //
       // // Step 2: Persist to Database
       // await this.persistToDatabase(
       //   eventData,
