@@ -16,6 +16,7 @@ export class QueueProcessor {
 
     try {
       // Save raw and processed event to DB
+      this.logger.log('Persisting event data...');
       await this.prismaService.saveProcessedBridgeEventDataBatch(formatedEventData, updates);
 
       this.logger.log('Event data persisted successfully');
