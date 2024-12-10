@@ -61,6 +61,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       volumeChange: bigint;
     }[],
   ): Promise<void> {
+    console.log('1');
     const createOperations = updates.map(update =>
       this.processedBridgeData.create({
         data: {
@@ -85,6 +86,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       },
     });
 
+    console.log('2');
     await this.$transaction([...createOperations, bridgeEvent]);
     this.logger.log('Batch database updates executed');
   }
