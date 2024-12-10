@@ -43,7 +43,7 @@ export class MetricsService {
       const updatedChainTxCount = chainTxCount as string;
       const updatedBridgeUseCount = bridgeUsageCount as string;
 
-      await this.redisService.publishBridgeEvents(
+      await this.redisService.publishAndPersistBridgeEvents(
         eventData,
         updatedTokenVolume,
         updatedChainTxCount,

@@ -88,7 +88,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async publishBridgeEvents(
+  async publishAndPersistBridgeEvents(
     eventData: SocketBridgeEventLog,
     updatedTokenVolume: string,
     updatedChainTxCount: string,
@@ -102,25 +102,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const tokenField = eventData.args.token;
       const chainField = eventData.args.toChainId.toString();
 
-      // Update Redis and publish events
-      await this.updateRedisDataAndPublish(
-        tokenField,
-        updatedTokenVolume,
-        chainField,
-        updatedChainTxCount,
-        eventData.args.bridgeName,
-        updatedBridgeUseCount,
-      );
+      await Promise.all([
+        // Update Redis and publish events
+        this.updateRedisDataAndPublish(
+          tokenField,
+          updatedTokenVolume,
+          chainField,
+          updatedChainTxCount,
+          eventData.args.bridgeName,
+          updatedBridgeUseCount,
+        ),
 
-      // Format event data and add a job to the queue
-      await this.addEventToDatabaseQueue(
-        eventData,
-        tokenField,
-        chainField,
-        updatedTokenVolume,
-        updatedChainTxCount,
-        updatedBridgeUseCount,
-      );
+        // Format event data and add a job to the queue
+        this.addEventToDatabaseQueue(
+          eventData,
+          tokenField,
+          chainField,
+          updatedTokenVolume,
+          updatedChainTxCount,
+          updatedBridgeUseCount,
+        ),
+      ]);
 
       this.logger.log('Batch Redis updates executed successfully');
 
