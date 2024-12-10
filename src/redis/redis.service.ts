@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { createClient } from 'redis';
 import { SocketBridgeEventLog } from '../../types';
-import BigNumber from 'bignumber.js';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { BridgeDataType } from '@prisma/client';
@@ -89,9 +88,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async batchBridgeEventsRedisUpdate(
+  async publishBridgeEvents(
     eventData: SocketBridgeEventLog,
-    normalizedAmount: string,
+    updatedTokenVolume: string,
+    updatedChainTxCount: string,
+    updatedBridgeUseCount: string,
   ): Promise<{
     updatedTokenVolume: string;
     updatedChainTxCount: string;
@@ -101,23 +102,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const tokenField = eventData.args.token;
       const chainField = eventData.args.toChainId.toString();
 
-      // Fetch and update Redis data
-      const { currentTokenVolume, chainTxCount, bridgeUsageCount } =
-        await this.fetchCurrentRedisData(
-          tokenField,
-          eventData.args.toChainId.toString(),
-          eventData.args.bridgeName,
-        );
-
-      const updatedTokenVolume = this.incrementBigNumber(
-        currentTokenVolume as string,
-        normalizedAmount,
-      );
-      const updatedChainTxCount = chainTxCount as string;
-      const updatedBridgeUseCount = bridgeUsageCount as string;
-
       // Update Redis and publish events
-      await this.updateRedisTokenVolumeAndPublish(
+      await this.updateRedisDataAndPublish(
         tokenField,
         updatedTokenVolume,
         chainField,
@@ -149,19 +135,19 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async fetchCurrentRedisData(tokenField: string, chainField: string, bridgeName: string) {
+  async fetchCurrentRedisData(tokenField: string, chainField: string, bridgeName: string) {
     const pipeline = this.client.multi();
 
     pipeline.hGet(this.tokenVolumeKey, tokenField);
-    pipeline.hIncrBy(this.chainTxCountKey, chainField, 1);
-    pipeline.hIncrBy(this.bridgeUsageKey, bridgeName, 1);
+    pipeline.hGet(this.chainTxCountKey, chainField);
+    pipeline.hGet(this.bridgeUsageKey, bridgeName);
 
     const [currentTokenVolume, chainTxCount, bridgeUsageCount] = await pipeline.exec();
 
     return { currentTokenVolume, chainTxCount, bridgeUsageCount };
   }
 
-  private async updateRedisTokenVolumeAndPublish(
+  private async updateRedisDataAndPublish(
     tokenField: string,
     updatedTokenVolume: string,
     chainField: string,
@@ -172,6 +158,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const pipeline = this.client.multi();
 
     pipeline.hSet(this.tokenVolumeKey, tokenField, updatedTokenVolume);
+    pipeline.hIncrBy(this.chainTxCountKey, chainField, 1);
+    pipeline.hIncrBy(this.bridgeUsageKey, bridgeName, 1);
 
     pipeline.publish(
       'bridge_events:processed_updates',
@@ -240,12 +228,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.logger.log('Update added to database queue');
-  }
-
-  private incrementBigNumber(currentValue: string | null, increment: string): string {
-    const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
-    const updated = current.plus(increment);
-    return updated.toString();
   }
 
   private formatBigInt(obj: any): any {

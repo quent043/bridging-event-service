@@ -15,6 +15,12 @@ export class MetricsService {
     return new BigNumber(amount).dividedBy(new BigNumber(10).pow(decimals));
   }
 
+  private incrementBigNumber(currentValue: string | null, increment: string): string {
+    const current = currentValue ? new BigNumber(currentValue) : new BigNumber(0);
+    const updated = current.plus(increment);
+    return updated.toString();
+  }
+
   async processBridgeEvent(eventData: SocketBridgeEventLog) {
     this.logger.log('Processing event...');
 
@@ -23,7 +29,26 @@ export class MetricsService {
       const decimals = tokenDecimalsMapping[eventData.args.token] || 18;
       const normalizedAmount = this.normalizeAmount(amount, decimals).toString();
 
-      await this.redisService.batchBridgeEventsRedisUpdate(eventData, normalizedAmount);
+      const { currentTokenVolume, chainTxCount, bridgeUsageCount } =
+        await this.redisService.fetchCurrentRedisData(
+          eventData.args.token,
+          eventData.args.toChainId.toString(),
+          eventData.args.bridgeName,
+        );
+
+      const updatedTokenVolume = this.incrementBigNumber(
+        currentTokenVolume as string,
+        normalizedAmount,
+      );
+      const updatedChainTxCount = chainTxCount as string;
+      const updatedBridgeUseCount = bridgeUsageCount as string;
+
+      await this.redisService.publishBridgeEvents(
+        eventData,
+        updatedTokenVolume,
+        updatedChainTxCount,
+        updatedBridgeUseCount,
+      );
 
       this.logger.log('Event processed successfully');
     } catch (error: any) {
