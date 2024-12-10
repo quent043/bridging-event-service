@@ -25,7 +25,13 @@
     "stop:with-docker": "npm run docker:down",
     "db:setup": "npx prisma migrate deploy",
     "db:reset": "npx prisma migrate reset --force",
-    "prisma:generate": "npx prisma generate"
+    "prisma:generate": "npx prisma generate",
+    "start:pm2": "pm2 start ecosystem.config.js",
+    "stop:pm2": "pm2 stop ecosystem.config.js",
+    "restart:pm2": "pm2 restart ecosystem.config.js",
+    "logs:pm2": "pm2 logs data-collector-service",
+    "delete:pm2": "pm2 delete ecosystem.config.js",
+    "pm2:startup": "pm2 startup && pm2 save"
   },
   "engines": {
     "npm": ">=8.0.0",
