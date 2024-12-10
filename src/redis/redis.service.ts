@@ -19,6 +19,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       url: process.env.REDIS_URL || 'redis://localhost:6379',
     });
 
+    this.eventQueue.on('failed', (job, err) => {
+      this.logger.error(`Job ${job.id} failed:`, err);
+    });
+
+    this.eventQueue.on('completed', job => {
+      this.logger.log(`Job ${job.id} completed successfully`);
+    });
+
     this.client.on('error', err => {
       this.logger.error('Redis Client Error:', err);
     });
