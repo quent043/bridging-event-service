@@ -4,6 +4,7 @@ import { SocketGatewayABI } from '../../contracts/ABI/SocketGateway';
 import { MetricsService } from '../metrics/metrics.service';
 import { SocketBridgeEventLog } from '../../types';
 
+//TODO: Decouple the event listener from the metrics service, link with redis queues
 @Injectable()
 export class DataCollectorService implements OnModuleInit {
   private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
