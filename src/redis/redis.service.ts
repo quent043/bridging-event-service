@@ -4,6 +4,7 @@ import { SocketBridgeEventLog } from '../../types';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { BridgeDataType } from '@prisma/client';
+import { formatBigInt } from '../shared/utils';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -203,7 +204,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   ) {
     this.logger.log('Initiating database update...');
 
-    const formatedEventData = this.formatBigInt(eventData);
+    const formatedEventData = formatBigInt(eventData);
 
     await this.eventQueue.add('save-event', {
       formatedEventData,
@@ -230,20 +231,5 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.logger.log('Update added to database queue');
-  }
-
-  private formatBigInt(obj: any): any {
-    if (typeof obj === 'bigint') {
-      return obj.toString();
-    }
-    if (Array.isArray(obj)) {
-      return obj.map(this.formatBigInt);
-    }
-    if (obj !== null && typeof obj === 'object') {
-      return Object.fromEntries(
-        Object.entries(obj).map(([key, value]) => [key, this.formatBigInt(value)]),
-      );
-    }
-    return obj;
   }
 }
