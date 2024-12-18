@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Log, PublicClient } from 'viem';
 import { SocketGatewayABI } from '../../contracts/ABI/SocketGateway';
-import { MetricsService } from '../metrics/metrics.service';
 import { SocketBridgeEventLog } from '../../types';
+import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
+import { formatBigInt } from '../shared/utils';
 
-//TODO: Decouple the event listener from the metrics service, link with redis queues
 @Injectable()
 export class DataCollectorService implements OnModuleInit {
   private readonly contractAddress = '0x3a23F943181408EAC424116Af7b7790c94Cb97a5';
@@ -15,7 +16,7 @@ export class DataCollectorService implements OnModuleInit {
 
   constructor(
     @Inject('PUBLIC_CLIENT') private publicClient: PublicClient,
-    private readonly metricsService: MetricsService,
+    @InjectQueue('event-queue') private readonly eventQueue: Queue,
   ) {}
 
   async onModuleInit() {
@@ -45,11 +46,14 @@ export class DataCollectorService implements OnModuleInit {
                 socketLog.args.amount.toString(),
                 socketLog.args.toChainId.toString(),
               );
-              await this.metricsService.processBridgeEvent(socketLog);
+
+              await this.eventQueue.add('process-event-metrics', {
+                formatedEventData: formatBigInt(socketLog),
+              });
             }),
           );
         } catch (error) {
-          this.logger.error('Failed to process one or more event logs:', error);
+          this.logger.error('Failed to enqueue one or more event logs for processing:', error);
         }
       },
     });

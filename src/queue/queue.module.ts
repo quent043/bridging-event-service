@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueProcessor } from './queue.processor';
+import { MetricsService } from '../metrics/metrics.service';
+import { RedisService } from '../redis/redis.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { QueueProcessor } from './queue.processor';
       name: 'event-queue',
     }),
   ],
-  providers: [QueueProcessor, PrismaService],
+  providers: [QueueProcessor, PrismaService, MetricsService, RedisService],
   exports: [BullModule],
 })
 export class QueueModule {}
