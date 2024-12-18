@@ -40,8 +40,8 @@ export class MetricsService {
         currentTokenVolume as string,
         normalizedAmount,
       );
-      const updatedChainTxCount = chainTxCount as string;
-      const updatedBridgeUseCount = bridgeUsageCount as string;
+      const updatedChainTxCount = (Number(chainTxCount) + 1).toString();
+      const updatedBridgeUseCount = (Number(bridgeUsageCount) + 1).toString();
 
       await this.redisService.publishAndPersistBridgeEvents(
         eventData,
